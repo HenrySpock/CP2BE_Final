@@ -1,9 +1,20 @@
 // Import the required modules
 const express = require('express');
-const cors = require('cors'); // Import the CORS middleware
+const cors = require('cors'); // Import the CORS middleware 
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
+
+// env variables 
+const jwtSecret = process.env.JWT_SECRET; 
+const emailUser = process.env.EMAIL_USER;
+const emailPassword = process.env.EMAIL_PASSWORD; 
 
 // Create an Express application
 const app = express();
+
+// Models: 
+const { User } = require('./models');
 
 // Routes:
 const { FeedbackReport } = require('./models');
@@ -13,10 +24,12 @@ const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
   service: 'gmail',  // Choose your email provider
   auth: {
-    user: 'mhenrytillman@gmail.com',  // Your email address
-    pass: 'fcyy tuzn iksq loes'  // Your email password
+    user: emailUser,  // Your email address
+    pass: emailPassword  // Your email password
   }
 });
+
+
 
 // Set up middleware
 app.use(express.json()); // Example middleware to parse JSON data
@@ -78,6 +91,45 @@ app.post('/submit-feedback', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+ 
+// User Registration 
+app.post('/register', async (req, res) => {
+  const { firstName, lastName, username, email, password, retypedPassword, adminKey } = req.body;
+
+  if (password !== retypedPassword) {
+    return res.status(400).send('Passwords do not match');
+  }
+
+  const hashedPassword = bcrypt.hashSync(password, 10);
+  const isAdmin = adminKey === process.env.ADMIN_KEY;
+
+  try {
+    await User.create({ firstName, lastName, username, email, password: hashedPassword, isAdmin });
+    res.send('Registration successful');
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server error');
+  }
+});
+ 
+// User Login 
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  try {
+    const user = await User.findOne({ where: { username } });
+    if (!user || !bcrypt.compareSync(password, user.password)) {
+      return res.status(401).send('Invalid credentials');
+    }
+
+    const token = jwt.sign({ userId: user.user_id, isAdmin: user.isAdmin }, jwtSecret, { expiresIn: '1h' });
+    res.send({ token, user });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server error');
+  }
+});
+
 
 // Start the server
 const PORT = process.env.PORT || 5000;
