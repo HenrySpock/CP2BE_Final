@@ -1,15 +1,15 @@
 // models.js
 
 const { Sequelize, DataTypes, Model } = require('sequelize');
-const sequelize = require('./sequelize'); 
+// const sequelize = require('sequelize'); 
 
-// const sequelize = new Sequelize('castletracker', 'kodai', 'ronan', {
-//   host: 'localhost',
-//   dialect: 'postgres',
-//   define: {
-//     underscored: true,
-//   }
-// });
+const sequelize = new Sequelize('castletracker', 'kodai', 'ronan', {
+  host: 'localhost',
+  dialect: 'postgres',
+  define: {
+    underscored: true,
+  }
+});
 
 class User extends Model {}
 User.init({
@@ -92,7 +92,9 @@ FeedbackReport.init({
   blog_post_id: { type: DataTypes.INTEGER, references: { model: BlogPost, key: 'blog_post_id' } },
   content: DataTypes.TEXT,
   createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
-  updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+  updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  name: { type: DataTypes.STRING, allowNull: false },  // new field for name
+  email: { type: DataTypes.STRING, allowNull: false },  // new field for email
 }, { sequelize, modelName: 'FeedbackReport' });
 
 class Rating extends Model {}
