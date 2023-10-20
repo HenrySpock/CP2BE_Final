@@ -145,10 +145,12 @@ Friendship.init({
 class Notification extends Model {}
 Notification.init({
   notificationId: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-  user_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
-  type: { type: DataTypes.STRING, allowNull: false }, // New field to specify type of notification
+  sender_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
+  recipient_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
+  type: { type: DataTypes.STRING, allowNull: false },
   content: DataTypes.TEXT,
   expiryDate: DataTypes.DATE,
+  dismissed: { type: DataTypes.BOOLEAN, defaultValue: false },
   createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'Notification' });
@@ -278,13 +280,25 @@ Friendship.belongsTo(User, {
 
 // Associations for Notification
 User.hasMany(Notification, {
-  foreignKey: 'user_id',
+  foreignKey: 'sender_id',
   onDelete: 'CASCADE',
-  as: 'Notifications'
+  as: 'SentNotifications'
 });
 
 Notification.belongsTo(User, {
-  foreignKey: 'user_id'
+  foreignKey: 'sender_id',
+  as: 'Sender'
+});
+
+User.hasMany(Notification, {
+  foreignKey: 'recipient_id',
+  onDelete: 'CASCADE',
+  as: 'ReceivedNotifications'
+});
+
+Notification.belongsTo(User, {
+  foreignKey: 'recipient_id',
+  as: 'Recipient'
 });
 
 module.exports = {

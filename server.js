@@ -4,6 +4,7 @@ const cors = require('cors'); // Import the CORS middleware
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+const scheduledJobs = require('./scheduledJobs');
 
 const { sequelize } = require('./models');
  
@@ -752,6 +753,14 @@ app.patch('/api/user/:userId/password', async (req, res) => {
 app.post('/api/friends/request', async (req, res) => {
   const { requester, requestee } = req.body;
   
+  // Get the username of the requester
+  const requesterUser = await User.findOne({
+    where: {
+      user_id: requester
+    }
+  });
+  const requesterUsername = requesterUser.username;
+
   // Create a new row in the Friendship table
   const friendship = await Friendship.create({
     user1: requester,
@@ -762,10 +771,11 @@ app.post('/api/friends/request', async (req, res) => {
   
   // Create a new notification for the requestee
   await Notification.create({
-    recipient: requestee,
-    sender: requester,
+    recipient_id: requestee,
+    sender_id: requester,
     type: 'friend-request',
-    read: false,
+    content: `${requesterUsername} has sent you a friend request`,  // Adjust content as needed
+    expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
   });
   
   res.json({ success: true });
@@ -812,15 +822,152 @@ app.get('/api/friends/status/:user1/:user2', async (req, res) => {
 });
 
 // Notification endpoint  
-app.get('/api/notifications/:username', async (req, res) => {
-  const { username } = req.params;
+// app.get('/api/notifications/:username', async (req, res) => {
+//   const { username } = req.params;
   
-  const notifications = await Notification.findAll({
-    where: { recipient: username, read: false }
-  });
+//   const notifications = await Notification.findAll({
+//     where: { recipient: username, read: false }
+//   });
   
-  res.json(notifications);
+//   res.json(notifications);
+// });
+
+// Populating notifications on a user's UserHub
+// app.get('/api/notifications/:userId', async (req, res) => {
+//   console.log('HEY THERE')
+//   const { userId } = req.params;
+//   try {
+//     const notifications = await Notification.findAll({
+//       where: {
+//         recipientId: userId,
+//         dismissed: false,
+//       },
+//       include: [
+//         { model: User, as: 'Sender', attributes: ['username'] },  // Include sender information
+//         { model: User, as: 'Recipient', attributes: ['username'] }  // Include recipient information if needed
+//       ],
+//       order: [['createdAt', 'DESC']]  // Optional: Order by creation date
+//     });
+//     res.json(notifications);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).send('Server Error');
+//   }
+// });
+
+app.get('/api/notifications/:userId', async (req, res) => {
+  console.log('Received GET request on /api/notifications/' + req.params.userId);
+  const { userId } = req.params;
+  try {
+    const notifications = await Notification.findAll({
+      where: {
+        recipient_id: userId,  // Updated column name
+        dismissed: false,  // Updated column name
+      },
+      include: [
+        { model: User, as: 'Sender', attributes: ['username'] },
+        { model: User, as: 'Recipient', attributes: ['username'] }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(notifications);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server Error');
+  }
 });
+
+// Accept a friend request 
+app.post('/api/friends/request/accept', async (req, res) => {
+  const { requester, requestee } = req.body;
+
+  try {
+    // Update the friendship status
+    await Friendship.update(
+      { accepted: true },
+      { where: { user1: requester, user2: requestee } }
+    );
+
+    // Create a new notification for the requester
+    await Notification.create({
+      sender_id: requestee,
+      recipient_id: requester,
+      type: 'friend-request-accepted',
+      content: `${requestee} has accepted your friend request`,
+      dismissed: false,
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error accepting friend request:', error);
+    res.status(500).send('Server Error');
+  }
+});
+
+// // Deny a friend request 
+// app.post('/api/friends/request/deny', async (req, res) => {
+//   const { requester, requestee } = req.body;
+
+//   try {
+//     // Update the friendship status
+//     await Friendship.update(
+//       { denied: true },
+//       { where: { user1: requester, user2: requestee } }
+//     );
+
+//     res.json({ success: true });
+//   } catch (error) {
+//     console.error('Error denying friend request:', error);
+//     res.status(500).send('Server Error');
+//   }
+// });
+
+// // Deny a friend request 
+// app.post('/api/friends/request/deny', async (req, res) => {
+//   const { sender_id, recipient_id } = req.body;
+
+//   try {
+//     // Update the friendship status
+//     await Friendship.update(
+//       { denied: true },
+//       { where: { user1: sender_id, user2: recipient_id } }
+//     );
+
+//     res.json({ success: true });
+//   } catch (error) {
+//     console.error('Error denying friend request:', error);
+//     res.status(500).send('Server Error');
+//   }
+// });
+ 
+// Deny a friend request 
+app.post('/api/friends/request/deny', async (req, res) => {
+  const { sender_id, recipient_id, notificationId } = req.body;
+
+  try {
+    // Start a transaction to ensure both updates are successful
+    await sequelize.transaction(async (t) => {
+      // Update the friendship status
+      await Friendship.update(
+        { denied: true },
+        { where: { user1: sender_id, user2: recipient_id }, transaction: t }
+      );
+      
+      // Update the notification status
+      await Notification.update(
+        { dismissed: true },
+        { where: { notification_id: notificationId }, transaction: t }
+      );
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error denying friend request:', error);
+    res.status(500).send('Server Error');
+  }
+});
+
+
 
 // Start the server
 const PORT = process.env.PORT || 5000;
