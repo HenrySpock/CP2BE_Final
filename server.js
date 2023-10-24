@@ -1,3 +1,5 @@
+process.env.DEBUG = 'socket.io*';
+
 // Import the required modules
 const express = require('express');
 const cors = require('cors'); // Import the CORS middleware 
@@ -11,6 +13,8 @@ const { sequelize } = require('./models');
 const bodyParser = require('body-parser');
 
 const { Op } = require('sequelize');
+ 
+
 
 // env variables 
 const jwtSecret = process.env.JWT_SECRET; 
@@ -20,15 +24,44 @@ const adminKey = process.env.ADMIN_KEY;
 // const apiKey = 'eit4xzF_srAoQvKkrYZx7ffANGVLGd0zdZjYufIxS-W5VUxpWvURPoQQgY8tL7SiZGm-KsxlmgNlwx0Dnaoa8LD_DNX25jWWsbAab-7QQlf8QTQVxE-bN1EbhLYCZXYx'; 
 const apiKey = process.env.API_KEY;
 
+
+const http = require('http');
+const socketIo = require('socket.io');
+  
 // Create an Express application
 const app = express();
+const server = http.createServer(app);
+const io = socketIo(server, {
+  cors: {
+      origin: "http://localhost:3000",  // allowing connections from your frontend
+      methods: ["GET", "POST"]
+  }
+});
 
+io.on('connection', (socket) => {
+  console.log('New client connected'); 
+  // Assume userId is passed as a query parameter in the socket connection request
+  const userId = socket.handshake.query.userId;
+  console.log('socket.handshake.query.userId: ', userId)
+  if (userId) {
+    
+    socket.join(userId);
+    console.log(socket, ' joined by userId: ', userId)
+    console.log('Rooms:', socket.adapter.rooms);
+  }
 
+  socket.on('disconnect', () => {
+    console.log('Client disconnected');
+    if (userId) {
+      socket.leave(userId);
+    }
+  });
+});
 
 app.use(bodyParser.json()); 
 
 // Models: 
-const { User, Image, Interaction, Travelog, Comment, Notification, Message, FeedbackReport, Rating, ForbiddenWord, Friendship, } = require('./models');
+const { User, Image, Interaction, Travelog, Comment, Notification, Message, FeedbackReport, Rating, ForbiddenWord, Friendship, Follow, Block} = require('./models');
 
 // Routes: 
 
@@ -104,30 +137,6 @@ app.post('/submit-feedback', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
- 
-// User Registration 
-// app.post('/register', async (req, res) => {
-//   const { firstName, lastName, username, email, password, retypedPassword, adminKey, securityQuestion, answer } = req.body;
-//   console.log(req.body);
-//   if (password !== retypedPassword) {
-//     return res.status(400).send('Passwords do not match');
-//   }
-
-//   const hashedPassword = bcrypt.hashSync(password, 10);
-//   const isAdmin = adminKey === process.env.ADMIN_KEY;
-  
-//   if (adminKey && adminKey !== process.env.ADMIN_KEY) {
-//     return res.status(400).send('Invalid Admin Key');
-//   }
-
-//   try {
-//     await User.create({ firstName, lastName, username, email, password: hashedPassword, isAdmin, securityQuestion, answer });
-//     res.send('Registration successful');
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).send('Server error');
-//   }
-// });
 
 app.post('/register', async (req, res) => {
   const {
@@ -309,57 +318,6 @@ app.post('/api/travelog', async (req, res) => {
   }
 });
 
-// Get travelogs for home.js
-// app.get('/api/travelog-entries', async (req, res) => {
-//   try {
-//       // Fetch the travelog entries with the associated first image and user details
-//       const travelogEntries = await Travelog.findAll({
-//           include: [{
-//               model: Image,
-//               as: 'Images',
-//               limit: 1, // Limit to the first image
-//           }, {
-//               model: User,
-//               attributes: ['username'] // Only fetch these attributes from the user
-//           }],
-//           attributes: ['site', 'country'], // Only fetch these attributes from the travelog
-//       });
-
-//       // Return the travelog entries as JSON
-//       res.json(travelogEntries);
-//   } catch (error) {
-//       console.error("Error fetching travelog entries:", error);
-//       res.status(500).json({ error: 'Failed to fetch travelog entries.' });
-//   }
-// });
-
-// // Get travelogs for mapping:
-// app.get('/api/travelog-entries', async (req, res) => {
-//   try {
-//       // Fetch the travelog entries with the associated first image and user details
-//       const travelogEntries = await Travelog.findAll({
-//           include: [{
-//               model: Image,
-//               as: 'Images',
-//               limit: 1, // Limit to the first image
-//           }, {
-//               model: User,
-//               attributes: ['username'] // Only fetch these attributes from the user
-//           }],
-//           attributes: ['travelog_id', 'site', 'country', 'latitude', 'longitude', 'title', 'date_visited'], // Added latitude and longitude
-//           order: [['date_visited', 'DESC']],
-//       });
-
-//       console.log('travelogEntries: ', travelogEntries)
-
-//       // Return the travelog entries as JSON
-//       res.json(travelogEntries);
-//   } catch (error) {
-//       console.error("Error fetching travelog entries:", error);
-//       res.status(500).json({ error: 'Failed to fetch travelog entries.' });
-//   }
-// });
-
 // Get travelogs for mapping including reported:
 app.get('/api/travelog-entries', async (req, res) => {
   try {
@@ -499,24 +457,6 @@ app.patch('/api/travelog/:id/images', async (req, res) => {
   }
 });
 
-// // Route to Delete Travelog
-// app.delete('/api/travelog/:travelogId', async (req, res) => {
-//   try {
-//     const travelogId = req.params.travelogId;
-//     // Assuming you have a Travelog model with a related Images model
-//     const travelog = await Travelog.findById(travelogId);
-//     if (travelog) {
-//       await travelog.destroy();  // This will also delete associated images if you have set up cascading deletes
-//       res.status(200).send({ message: 'Travelog deleted successfully' });
-//     } else {
-//       res.status(404).send({ message: 'Travelog not found' });
-//     }
-//   } catch (error) {
-//     console.error('Error deleting travelog:', error);
-//     res.status(500).send({ message: 'Server error' });
-//   }
-// });
-
 // Route to Delete Travelog
 app.delete('/api/travelog/:travelogId', async (req, res) => {
   try {
@@ -534,21 +474,6 @@ app.delete('/api/travelog/:travelogId', async (req, res) => {
     res.status(500).send({ message: 'Server error' });
   }
 });
-
-// Endpoint to fetch reported travelogs
-// app.get('/api/reported-travelogs', async (req, res) => {
-//   try {
-//     const reportedTravelogs = await Travelog.findAll({
-//       where: {
-//         reported: true
-//       }
-//     });
-//     res.json(reportedTravelogs);
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).send('Server Error');
-//   }
-// });
 
 app.get('/api/reported-travelogs', async (req, res) => {
   try {
@@ -593,18 +518,6 @@ app.patch('/api/travelog/:travelogId/report', async (req, res) => {
   }
 });
 
-// Retrieve travelogs of current user  
-// app.get('/api/user/:userId/travelogs', async (req, res) => {
-//   try {
-//     const userId = req.params.userId;
-//     const travelogs = await Travelog.findAll({ where: { userId } });
-//     res.status(200).send(travelogs);
-//   } catch (error) {
-//     console.error('Error fetching user travelogs:', error);
-//     res.status(500).send({ message: 'Server error' });
-//   }
-// });
-
 // Retrieve travelogs of current user
 app.get('/api/user/:userId/travelogs', async (req, res) => {
   try {
@@ -619,6 +532,133 @@ app.get('/api/user/:userId/travelogs', async (req, res) => {
     res.status(500).send({ message: 'Server error' });
   }
 });
+
+// Geting ids of all friends:
+
+
+// Retrieve filtered travelogs for userhub:
+// app.get('/api/travelogs/filter', async (req, res) => {
+
+//   try {
+//   const { filterType, userId } = req.query;
+
+//   console.log('Filter Type:', filterType);
+//   console.log('User ID:', userId);
+
+//   let travelogs = [];
+  
+//   switch (filterType) {
+//     case 'yourTravelogs':
+//       travelogs = await Travelog.findAll({
+//         where: { userId },
+//         include: [{ model: Image, as: 'Images' }]
+//       });
+//       break;
+//     case 'friendsTravelogs': 
+//       const friendsIds = await getFriendsIds(userId);
+//       travelogs = await Travelog.findAll({
+//         where: { userId: friendsIds },
+//         include: [{ model: Image, as: 'Images' },
+//         { model: User, attributes: ['username'] }
+//       ]
+//       });
+//       break;
+//     // ... handle other filter types similarly
+//     default:
+//       throw new Error('Invalid filter type');
+//   }
+//     res.status(200).send(travelogs);
+// } catch (error) {
+//   console.error('Error fetching filtered travelogs:', error);
+//   res.status(500).send({ message: 'Server error' });
+// }
+// });
+
+// Helper functions to get friends, followers, followings, and friends IDs
+const getFriendsIds = async (userId) => {
+  try {
+    const friendships = await Friendship.findAll({
+      where: {
+        [Op.or]: [{ user1: userId }, { user2: userId }],
+        accepted: true  // Assuming 'accepted' is a boolean column; adjust if it's a string
+      },
+      attributes: ['user1', 'user2']
+    });
+    const friendIds = friendships.map(friendship => {
+      return friendship.user1 === userId ? friendship.user2 : friendship.user1;
+    });
+    return friendIds;
+  } catch (error) {
+    console.error('Error fetching friend IDs:', error);
+    throw error;  // Propagate error to be handled by the calling function
+  }
+};
+
+const getFollowersIds = async (userId) => {
+  const followers = await Follow.findAll({ where: { followee_id: userId } });
+  return followers.map(follow => follow.follower_id);
+};
+
+const getFollowingsIds = async (userId) => {
+  const followings = await Follow.findAll({ where: { follower_id: userId } });
+  return followings.map(follow => follow.followee_id);
+};
+
+app.get('/api/travelogs/filter', async (req, res) => {
+  try {
+    const { filterType, userId } = req.query;
+    console.log('Filter Type:', filterType);
+    console.log('User ID:', userId);
+
+    let travelogs = [];
+    
+    switch (filterType) {
+      case 'yourTravelogs':
+        travelogs = await Travelog.findAll({
+          where: { userId },
+          include: [{ model: Image, as: 'Images' }]
+        });
+        break;
+      case 'friendsTravelogs': 
+        const friendsIds = await getFriendsIds(userId);
+        const filteredFriendsIds = friendsIds.filter(id => id !== parseInt(userId));  // Exclude current user
+        travelogs = await Travelog.findAll({
+          where: { userId: { [Op.in]: filteredFriendsIds } },  // Using Sequelize's Op.in operator
+          include: [{ model: Image, as: 'Images' },
+          { model: User, attributes: ['username'] }
+        ]
+        });
+        break;
+      case 'followersTravelogs':
+        const followersIds = await getFollowersIds(userId);
+        travelogs = await Travelog.findAll({
+          where: { userId: followersIds },
+          include: [{ model: Image, as: 'Images' },
+          { model: User, attributes: ['username'] }]
+        });
+        break;
+      case 'followingsTravelogs':
+        const followingsIds = await getFollowingsIds(userId);
+        travelogs = await Travelog.findAll({
+          where: { userId: followingsIds },
+          include: [{ model: Image, as: 'Images' },
+          { model: User, attributes: ['username'] }]
+        });
+        break;
+      // ... handle other filter types similarly
+      default:
+        throw new Error('Invalid filter type');
+    }
+    res.status(200).send(travelogs);
+  } catch (error) {
+    console.error('Error fetching filtered travelogs:', error);
+    res.status(500).send({ message: 'Server error' });
+  }
+});
+
+
+
+
 
 // Fetching Profile For Editing User Details
 app.get('/api/user/:userId', async (req, res) => {
@@ -716,39 +756,6 @@ app.patch('/api/user/:userId/password', async (req, res) => {
   }
 });
 
-// Express.js route handler for deleting a user and their associated data:
-// app.delete('/api/user/:userId', async (req, res) => {
-//   try {
-//     const userId = req.params.userId;
-//     const user = await User.findByPk(userId);
-
-//     if (!user) {
-//       return res.status(404).send('User not found');
-//     }
-
-//     await user.destroy();
-//     res.send('User deleted successfully');
-//   } catch (error) {
-//     console.error('Error deleting user:', error);
-//     res.status(500).send('Server error');
-//   }
-// });
-
-// app.delete('/api/user/:userId', async (req, res) => {
-//   console.log('req: ', req)
-//   try {
-    
-//     const userId = req.params.userId;
-//     await User.destroy({
-//       where: { user_id: userId }
-//     });
-//     res.send('User deleted successfully');
-//   } catch (error) {
-//     console.error('Error deleting user:', error);
-//     res.status(500).send('Server error');
-//   }
-// });
-
 // Handle Befriending 
 app.post('/api/friends/request', async (req, res) => {
   const { requester, requestee } = req.body;
@@ -768,36 +775,144 @@ app.post('/api/friends/request', async (req, res) => {
     accepted: false,
     denied: false,
   });
-  
-  // Create a new notification for the requestee
-  await Notification.create({
+
+  const notification = await Notification.create({
     recipient_id: requestee,
     sender_id: requester,
     type: 'friend-request',
-    content: `${requesterUsername} has sent you a friend request`,  // Adjust content as needed
+    content: JSON.stringify({
+        text: 'has sent you a friend request',
+        username: requesterUsername,
+        url: `/public_profile/${requesterUsername}`
+    }),
     expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
   });
-  
+
+  console.log('Attempting to notify requestee: ', requestee); 
+
+  io.to(requestee.toString()).emit('new-notification', notification);
+
+//   io.to(requestee.toString()).emit('new-notification', notification, (acknowledgmentData) => {
+//     if (acknowledgmentData.error) {
+//         console.error('Client reported an error:', acknowledgmentData.error);
+//     } else {
+//         console.log('Acknowledgment received:', acknowledgmentData);
+//     }
+// }
+// );
+
+  console.log(notification, 'successfully emitted to: ', requestee);
+
   res.json({ success: true });
 });
 
 //Handle deleting a friend request
 app.delete('/api/friends/request', async (req, res) => {
   const { requester, requestee } = req.body;
-  
+
   try {
+    // Begin a transaction
+    const transaction = await sequelize.transaction();
+
+    // Delete the friendship
     await Friendship.destroy({
       where: {
         [Op.or]: [
           { user1: requester, user2: requestee },
           { user1: requestee, user2: requester }
         ]
-      }
+      },
+      transaction
     });
-    
+
+    // Obtain the notificationId before deletion
+    const notification = await Notification.findOne({
+      where: {
+        type: 'friend-request',
+        [Op.and]: [
+          {
+            [Op.or]: [
+              { sender_id: requester, recipient_id: requestee },
+              { sender_id: requestee, recipient_id: requester }
+            ]
+          }
+        ]
+      },
+      transaction
+    });
+    const notificationId = notification ? notification.notificationId : null;
+
+    // Delete the associated notification
+    await Notification.destroy({
+      where: {
+        type: 'friend-request',
+        [Op.and]: [
+          {
+            [Op.or]: [
+              { sender_id: requester, recipient_id: requestee },
+              { sender_id: requestee, recipient_id: requester }
+            ]
+          }
+        ]
+      },
+      transaction
+    });
+
+    // Emit the notification-deleted event to both the requester and requestee
+    if (notificationId) {
+      io.to(requester.toString()).emit('notification-deleted', { notificationId });
+      io.to(requestee.toString()).emit('notification-deleted', { notificationId });
+    }
+
+    // Commit the transaction
+    await transaction.commit();
+
     res.json({ success: true });
   } catch (error) {
+    // Rollback the transaction if any errors occur
+    await transaction.rollback();  // Corrected method for rolling back the transaction
+
     console.error('Error canceling friendship request:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Handle unfriending a friend:
+app.delete('/api/friends/unfriend', async (req, res) => {
+  const { user1, user2 } = req.body;
+
+  try {
+    // Begin a transaction
+    const transaction = await sequelize.transaction();
+
+    // Delete the friendship
+    await Friendship.destroy({
+      where: {
+        [Op.or]: [
+          { user1, user2 },
+          { user1: user2, user2: user1 }
+        ]
+      },
+      transaction
+    });
+
+    console.log('user1:', user1, 'user2:', user2);
+    // Emit the unfriend event to both users
+    io.to(user1.toString()).emit('unfriend', { user2 });
+    console.log('unfriend event emitted to user1:', user1);
+    io.to(user2.toString()).emit('unfriend', { user1 });
+    console.log('unfriend event emitted to user2:', user2);
+    
+
+    // Commit the transaction
+    await transaction.commit();
+
+    res.json({ success: true });
+  } catch (error) {
+    // Rollback the transaction if any errors occur
+    await transaction.rollback();
+
+    console.error('Error unfriending user:', error);
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
@@ -821,40 +936,7 @@ app.get('/api/friends/status/:user1/:user2', async (req, res) => {
   }
 });
 
-// Notification endpoint  
-// app.get('/api/notifications/:username', async (req, res) => {
-//   const { username } = req.params;
-  
-//   const notifications = await Notification.findAll({
-//     where: { recipient: username, read: false }
-//   });
-  
-//   res.json(notifications);
-// });
-
-// Populating notifications on a user's UserHub
-// app.get('/api/notifications/:userId', async (req, res) => {
-//   console.log('HEY THERE')
-//   const { userId } = req.params;
-//   try {
-//     const notifications = await Notification.findAll({
-//       where: {
-//         recipientId: userId,
-//         dismissed: false,
-//       },
-//       include: [
-//         { model: User, as: 'Sender', attributes: ['username'] },  // Include sender information
-//         { model: User, as: 'Recipient', attributes: ['username'] }  // Include recipient information if needed
-//       ],
-//       order: [['createdAt', 'DESC']]  // Optional: Order by creation date
-//     });
-//     res.json(notifications);
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).send('Server Error');
-//   }
-// });
-
+// Get all notifications for a specific user
 app.get('/api/notifications/:userId', async (req, res) => {
   console.log('Received GET request on /api/notifications/' + req.params.userId);
   const { userId } = req.params;
@@ -876,69 +958,6 @@ app.get('/api/notifications/:userId', async (req, res) => {
     res.status(500).send('Server Error');
   }
 });
-
-// Accept a friend request 
-app.post('/api/friends/request/accept', async (req, res) => {
-  const { requester, requestee } = req.body;
-
-  try {
-    // Update the friendship status
-    await Friendship.update(
-      { accepted: true },
-      { where: { user1: requester, user2: requestee } }
-    );
-
-    // Create a new notification for the requester
-    await Notification.create({
-      sender_id: requestee,
-      recipient_id: requester,
-      type: 'friend-request-accepted',
-      content: `${requestee} has accepted your friend request`,
-      dismissed: false,
-    });
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error accepting friend request:', error);
-    res.status(500).send('Server Error');
-  }
-});
-
-// // Deny a friend request 
-// app.post('/api/friends/request/deny', async (req, res) => {
-//   const { requester, requestee } = req.body;
-
-//   try {
-//     // Update the friendship status
-//     await Friendship.update(
-//       { denied: true },
-//       { where: { user1: requester, user2: requestee } }
-//     );
-
-//     res.json({ success: true });
-//   } catch (error) {
-//     console.error('Error denying friend request:', error);
-//     res.status(500).send('Server Error');
-//   }
-// });
-
-// // Deny a friend request 
-// app.post('/api/friends/request/deny', async (req, res) => {
-//   const { sender_id, recipient_id } = req.body;
-
-//   try {
-//     // Update the friendship status
-//     await Friendship.update(
-//       { denied: true },
-//       { where: { user1: sender_id, user2: recipient_id } }
-//     );
-
-//     res.json({ success: true });
-//   } catch (error) {
-//     console.error('Error denying friend request:', error);
-//     res.status(500).send('Server Error');
-//   }
-// });
  
 // Deny a friend request 
 app.post('/api/friends/request/deny', async (req, res) => {
@@ -967,11 +986,442 @@ app.post('/api/friends/request/deny', async (req, res) => {
   }
 });
 
+// Function to fetch user by user_id so accepting friend request can structure notifications properly:
+async function getUserById(user_id) {
+  try {
+    const user = await User.findOne({
+      where: { user_id: user_id },
+      attributes: ['username']  // Only select the username attribute
+    });
+    return user;
+  } catch (error) {
+    console.error(error);
+    throw new Error('Database error');
+  }
+}
+
+// Accept a friend request from notification
+app.post('/api/friends/request/accept', async (req, res) => {
+  const { sender_id, recipient_id, notificationId } = req.body;
+  
+  try {
+    // Start a transaction
+    const t = await sequelize.transaction();
+
+    // Fetch the recipient's username
+    const recipient = await getUserById(recipient_id);
+
+    if (!recipient) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Recipient not found' });
+    }
+
+    const recipientUsername = recipient.username;
+
+    // Update the friendship status
+    await Friendship.update(
+      { accepted: true },
+      { where: { user1: sender_id, user2: recipient_id }, transaction: t }
+    );
+
+    // Dismiss the old notification
+    await Notification.update(
+      { dismissed: true },
+      { where: { notification_id: notificationId }, transaction: t }
+    );
+
+    // await Notification.create({
+    const notification = await Notification.create({
+      sender_id: recipient_id,
+      recipient_id: sender_id,
+      type: 'friend-request-accepted',
+      content: JSON.stringify({
+        username: recipientUsername,
+        text: 'has accepted your friend request.',
+        url: `/public_profile/${recipientUsername}`
+      }), 
+      expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+    }, { transaction: t });
+
+    console.log('Emitting notification to sender_id:', sender_id);
+    io.to(sender_id.toString()).emit('new-notification', notification);
+    console.log('Notification emitted');
+
+    // Commit the transaction
+    await t.commit();
+
+    res.json({ success: true });
+  } catch (error) {
+    // Rollback the transaction in case of an error
+    await t.rollback();
+    console.error('Error accepting friend request:', error);
+    res.status(500).send('Server Error');
+  }
+});
+
+// Accept a denied friend request from notification
+app.post('/api/friends/request/undenied', async (req, res) => {
+  let t;  // Declare t outside of the try block
+  try {
+    // Start a transaction
+    t = await sequelize.transaction();
+    
+    const { sender_id, recipient_id } = req.body;
+    
+    // Fetch the recipient's username
+    const recipient = await getUserById(recipient_id);
+
+    if (!recipient) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Recipient not found' });
+    }
+
+    const recipientUsername = recipient.username;
+    
+    // Update the friendship status to accepted
+    await Friendship.update(
+      { accepted: true, denied: false },
+      { where: { user1: sender_id, user2: recipient_id }, transaction: t }
+    );
+    
+    // Create a new notification for the acceptance
+    const notification = await Notification.create({
+      sender_id: recipient_id,
+      recipient_id: sender_id,
+      type: 'friend-request-accepted',
+      content: JSON.stringify({
+        username: recipientUsername,
+        text: 'has accepted your friend request.',
+        url: `/public_profile/${recipientUsername}`
+      }), 
+      expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+    }, { transaction: t });
+
+    console.log('Emitting notification to sender_id:', sender_id);
+    io.to(sender_id.toString()).emit('new-notification', notification);
+    console.log('Notification emitted');
+    
+    await t.commit();  // Commit the transaction
+    res.json({ success: true });
+  } catch (error) {
+    if (t) {
+      await t.rollback();  // Rollback the transaction if it exists
+    }
+    console.error('Error accepting friend request:', error);
+    res.status(500).send('Server Error');
+  }
+});
+
+// Dismiss a denied friend request 
+app.post('/api/friends/request/dismiss', async (req, res) => {
+  const { friendshipId } = req.body;
+  try {
+    // Update the 'dismissed' field for the specified friendship
+    await Friendship.update(
+      { dismissed: true },
+      { where: { friendshipId: friendshipId } }
+    );
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error dismissing friend request:', error);
+    res.status(500).send('Server Error');
+  }
+});
+
+// Handle Follows:
+app.post('/api/follow', async (req, res) => {
+  const { follower_id, followee_id } = req.body;
+  
+  try {
+      // Create a new follow relationship
+      const newFollow = await Follow.create({ follower_id, followee_id });
+
+      // Get the follower's username for the notification message
+      const follower = await User.findByPk(follower_id);
+      const followerUsername = follower ? follower.username : 'Someone';
+
+      // Create a new notification in the database
+      const notification = await Notification.create({
+        sender_id: follower_id,
+        recipient_id: followee_id,
+        type: 'new-follow',
+        content: JSON.stringify({
+          username: followerUsername,
+          text: 'has followed you.',
+          url: `/public_profile/${followerUsername}`
+        }), 
+        expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+      });
+
+      console.log('Notification created:', notification);
+
+      // Emit the notification to the followee
+      io.to(followee_id.toString()).emit('new-notification', notification);
+
+      res.json({ success: true });
+  } catch (error) {
+      console.error('Error creating follow relationship:', error);
+      res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Get notification id for depopulating 
+async function getNotificationId(follower_id, followee_id, transaction) {
+  try {
+    const notification = await Notification.findOne({
+      where: {
+        sender_id: follower_id,
+        recipient_id: followee_id,
+        type: 'new-follow'
+      },
+      transaction: transaction
+    });
+    return notification ? notification.notificationId : null;
+  } catch (error) {
+    console.error('Error fetching notification id:', error);
+    throw error;  // or handle error as appropriate
+  }
+}
+
+// Handle Unfollows:
+app.delete('/api/unfollow', async (req, res) => {
+  const { follower_id, followee_id } = req.body;
+
+  try {
+    // Start a transaction
+    const t = await sequelize.transaction();
+
+    // Get the notification_id using the helper function
+    const notificationId = await getNotificationId(follower_id, followee_id, t);
+    console.log('follower_id: ', follower_id, 'followee_id: ', followee_id, 'notificationId: ', notificationId);
+
+    // Delete the follow relationship
+    const deletedRows = await Follow.destroy({
+      where: {
+        follower_id: follower_id,
+        followee_id: followee_id
+      },
+      transaction: t  // Include transaction
+    });
+
+    if (deletedRows === 0) {
+      // No rows were deleted, the follow relationship may not have existed
+      await t.rollback();  // Rollback transaction
+      return res.status(404).json({ success: false, error: 'Follow relationship not found' });
+    }
+
+    // Delete the corresponding notification from the database
+    const deletedNotificationRows = await Notification.destroy({
+      where: {
+        sender_id: follower_id,
+        recipient_id: followee_id,
+        type: 'new-follow'  // Adjust the 'type' value to match your setup
+      },
+      transaction: t  // Include transaction
+    });
+
+    // Check if a notification was deleted
+    if (deletedNotificationRows === 0) {
+      console.warn('No follow notification found to delete');
+    }
+
+    // Emit an event to the followee to depopulate the 'Follow' notification
+    io.to(followee_id.toString()).emit('remove-follow-notification', { notificationId });
+
+    // Commit the transaction
+    await t.commit();
+
+    // Respond to the client indicating the action was successful
+    res.json({ success: true });
+  } catch (error) {
+    // Rollback the transaction in case of an error
+    await t.rollback();
+    console.error('Error unfollowing user:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Block a user: 
+app.post('/api/block', async (req, res) => {
+  const { blocker_id, blocked_id } = req.body;
+  try {
+    await Block.create({ blocker_id, blocked_id });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error blocking user:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// Retrive friends list:
+app.get('/api/friends/:userId', async (req, res) => {
+  const userId = parseInt(req.params.userId, 10);
+  // const userId = req.params.userId;  
+
+  try {
+    // Fetch friends relationships where the current user is involved
+    const friendsRelations = await Friendship.findAll({
+      where: {
+        [Op.or]: [
+          { user1: userId },
+          { user2: userId }
+        ],
+        accepted: true  // Only fetch accepted friend requests
+      },
+      include: [
+        { model: User, as: 'Requester', attributes: ['user_id', 'username', 'avatar'] },
+        { model: User, as: 'Requestee', attributes: ['user_id', 'username', 'avatar'] }
+      ]
+    });
+
+    console.log(friendsRelations);  // Log the fetched data
+
+    // Transform data to get a list of friend user objects
+    const friendsList = friendsRelations.map(relation => {
+      // Determine which user is the friend (i.e., not the current user)
+      if (relation.Requester && relation.Requester.user_id !== userId) {
+        return relation.Requester;
+      } else if (relation.Requestee && relation.Requestee.user_id !== userId) {
+        return relation.Requestee;
+      }
+    });
+    
+    res.json(friendsList);
+  } catch (error) {
+    console.error('Error fetching friends:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+// Retrieve followers list:
+app.get('/api/followers/:userId', async (req, res) => {
+  const userId = parseInt(req.params.userId, 10);
+
+  try {
+    const followersRelations = await Follow.findAll({
+      where: {
+        followee_id: userId
+      },
+      include: [
+        { model: User, as: 'Follower', attributes: ['user_id', 'username', 'avatar'] }
+      ]
+    });
+
+    console.log(followersRelations);  // Log the fetched data
+
+    // Transform data to get a list of follower user objects
+    const followersList = followersRelations.map(relation => relation.Follower);
+    
+    res.json(followersList);
+  } catch (error) {
+    console.error('Error fetching followers:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+// Retrieve followings list:
+app.get('/api/followings/:userId', async (req, res) => {
+  const userId = parseInt(req.params.userId, 10);
+
+  try {
+    const followingsRelations = await Follow.findAll({
+      where: {
+        follower_id: userId
+      },
+      include: [
+        { model: User, as: 'Followee', attributes: ['user_id', 'username', 'avatar'] }
+      ]
+    });
+
+    console.log(followingsRelations);  // Log the fetched data
+
+    // Transform data to get a list of followee user objects
+    const followingsList = followingsRelations.map(relation => relation.Followee);
+    
+    res.json(followingsList);
+  } catch (error) {
+    console.error('Error fetching followings:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+// Disconnections - get all denied users:  
+// app.get('/api/user/:userId/denied-requests', async (req, res) => {
+//   const { userId } = req.params;
+//   try {
+//     const deniedRequests = await Friendship.findAll({
+//       where: {
+//         user2: userId,  // Specify that user2 is the requestee who denied the request
+//         denied: true
+//       },
+//       include: [{ model: User, as: 'Requester' }]  // Only include the Requester model
+//     });
+//     res.json(deniedRequests);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).send('Server Error');
+//   }
+// });
+
+// Disconnections - get all denied / non-dismissed users:  
+app.get('/api/user/:userId/denied-requests', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const deniedRequests = await Friendship.findAll({
+      where: {
+        [Op.or]: [{ user1: userId }, { user2: userId }],
+        denied: true,
+        dismissed: false  // <-- Add this line to exclude dismissed requests
+      },
+      include: [{ model: User, as: 'Requester' }, { model: User, as: 'Requestee' }]
+    });
+    res.json(deniedRequests);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server Error');
+  }
+}); 
+
+// Disconnections - get all blocked users:  
+app.get('/api/user/:userId/blocked-users', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const blockedUsers = await User.findAll({
+      include: {
+        model: Block,
+        as: 'blocksReceived',  // Specify the alias of the association you want to include
+        where: { blocker_id: userId },
+      },
+    });
+    res.json(blockedUsers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server Error');
+  }
+});
+
+// Unblock a user  
+app.delete('/api/block/:blockId', async (req, res) => {
+  const { blockId } = req.params;
+  try {
+    const block = await Block.findOne({ where: { blockId } });
+    if (!block) {
+      return res.status(404).send('Block not found');
+    }
+    await block.destroy();
+    res.send('Block deleted successfully');
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server Error');
+  }
+});
+
+
 
 
 // Start the server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
