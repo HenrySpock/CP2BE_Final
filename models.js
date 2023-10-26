@@ -81,12 +81,25 @@ Friendship.init({
   dismissed: { type: DataTypes.BOOLEAN, defaultValue: false, }
 }, { sequelize, modelName: 'Friendship' });
 
+// Comment class:
+class Comment extends Model {}
+Comment.init({
+  comment_id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  travelog_id: { type: DataTypes.INTEGER, references: { model: Travelog, key: 'travelog_id' }, allowNull: true },  // updated line
+  user_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
+  parent_id: { type: DataTypes.INTEGER, references: { model: Comment, key: 'comment_id' }, allowNull: true },  // updated line
+  content: DataTypes.TEXT,
+  createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+}, { sequelize, modelName: 'Comment' });
+
 // Update to Notification model to handle type of notification
 class Notification extends Model {}
 Notification.init({
   notificationId: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   sender_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
   recipient_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
+  comment_id: { type: DataTypes.INTEGER, references: { model: Comment, key: 'comment_id' }, allowNull: true },
   type: { type: DataTypes.STRING, allowNull: false },
   content: DataTypes.TEXT,
   expiryDate: DataTypes.DATE,
@@ -110,23 +123,13 @@ const Block = sequelize.define('block', {
   blocked_id: {    type: Sequelize.INTEGER,    allowNull: false  }
 });
 
-module.exports = Block;
-
-class Comment extends Model {}
-Comment.init({
-  commentId: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-  travelog_id: { type: DataTypes.INTEGER, references: { model: Travelog, key: 'travelog_id' } },
-  user_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
-  content: DataTypes.TEXT,
-  createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
-  updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
-}, { sequelize, modelName: 'Comment' });
-
 class Message extends Model {}
 Message.init({
   messageId: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-  senderId: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
-  recipientId: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
+  caller_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
+  receiver_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
+  callerDel: { type: DataTypes.BOOLEAN, defaultValue: false },
+  receiverDel: { type: DataTypes.BOOLEAN, defaultValue: false },
   content: DataTypes.TEXT,
   createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
@@ -162,6 +165,7 @@ ForbiddenWord.init({
   updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'ForbiddenWord' });
 
+// Associations for Travelog:  
 User.hasMany(Travelog, {
   foreignKey: 'user_id',
   onDelete: 'CASCADE',  
@@ -181,6 +185,12 @@ Image.belongsTo(Travelog, {
 Travelog.belongsTo(User, {
   foreignKey: 'user_id'
 });
+
+Travelog.hasMany(Comment, {
+  foreignKey: 'travelog_id',
+  onDelete: 'CASCADE',  
+  as: 'comments'
+}); 
 
 // Associations for Friendship
 User.hasMany(Friendship, {
@@ -272,6 +282,28 @@ Block.belongsTo(User, {
 as: 'blocked' 
 });
 
+// Associations for comments: 
+User.hasMany(Comment, {
+  foreignKey: 'user_id',
+  as: 'comments'
+});
+ 
+Comment.belongsTo(User, {
+  foreignKey: 'user_id',
+  as: 'user'
+});
+
+Comment.belongsTo(Comment, {
+  foreignKey: 'parent_id',
+  as: 'parent'
+});
+
+Comment.hasMany(Notification, {
+  foreignKey: 'comment_id',
+  onDelete: 'CASCADE',
+  as: 'notifications'
+});
+
 module.exports = {
   User, 
   Image,
@@ -289,7 +321,9 @@ module.exports = {
   sequelize
 };
 
-sequelize.sync({ force: true })
-  .then(() => {
-    console.log(`Database & tables created!`);
-  });
+// sequelize.sync({ force: true })
+//   .then(() => {
+//     console.log(`Database & tables created!`);
+//   });
+
+ 

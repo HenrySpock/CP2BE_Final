@@ -13,8 +13,6 @@ const { sequelize } = require('./models');
 const bodyParser = require('body-parser');
 
 const { Op } = require('sequelize');
- 
-
 
 // env variables 
 const jwtSecret = process.env.JWT_SECRET; 
@@ -46,8 +44,10 @@ io.on('connection', (socket) => {
   if (userId) {
     
     socket.join(userId);
-    console.log(socket, ' joined by userId: ', userId)
-    console.log('Rooms:', socket.adapter.rooms);
+    // console.log(socket, ' joined by userId: ', userId)
+    // console.log('Rooms:', socket.adapter.rooms);
+    // console.log('Socket.rooms: ', socket.rooms);
+    console.log('Rooms:', io.sockets.adapter.rooms);
   }
 
   socket.on('disconnect', () => {
@@ -299,6 +299,7 @@ app.post('/api/travelog', async (req, res) => {
         user_id,
         ...otherData
     });
+
     console.log('Newly created Travelog:', newTravelog);
     // If images are included, save them as well
     if (req.body.imageUrls && req.body.imageUrls.length) {
@@ -331,7 +332,7 @@ app.get('/api/travelog-entries', async (req, res) => {
               model: User,
               attributes: ['username'] // Only fetch these attributes from the user
           }],
-          attributes: ['travelog_id', 'site', 'country', 'latitude', 'longitude', 'title', 'date_visited', 'reported'], // Added latitude and longitude
+          attributes: ['travelog_id', 'site', 'country', 'latitude', 'longitude', 'title', 'date_visited', 'reported', 'created_at'], // Added latitude and longitude
           order: [['date_visited', 'DESC']],
           where: {
               reported: false, // Only fetch entries that are not reported
@@ -407,8 +408,9 @@ app.patch('/api/travelog/:id', async (req, res) => {
           isPrivate,
           textBody
       });
-
+      
       res.json(travelog);
+      
   } catch (error) {
       console.error('Error updating travelog:', error);
       res.status(500).json({ error: 'Failed to update travelog' });
@@ -585,7 +587,9 @@ const getFriendsIds = async (userId) => {
       attributes: ['user1', 'user2']
     });
     const friendIds = friendships.map(friendship => {
-      return friendship.user1 === userId ? friendship.user2 : friendship.user1;
+      // return friendship.user1 === userId ? friendship.user2 : friendship.user1;
+      return friendship.user1 === parseInt(userId, 10) ? friendship.user2 : friendship.user1;
+
     });
     return friendIds;
   } catch (error) {
@@ -650,6 +654,7 @@ app.get('/api/travelogs/filter', async (req, res) => {
         throw new Error('Invalid filter type');
     }
     res.status(200).send(travelogs);
+    console.log(travelogs);
   } catch (error) {
     console.error('Error fetching filtered travelogs:', error);
     res.status(500).send({ message: 'Server error' });
@@ -1061,7 +1066,7 @@ app.post('/api/friends/request/accept', async (req, res) => {
 
 // Accept a denied friend request from notification
 app.post('/api/friends/request/undenied', async (req, res) => {
-  let t;  // Declare t outside of the try block
+  let t;  
   try {
     // Start a transaction
     t = await sequelize.transaction();
@@ -1416,8 +1421,283 @@ app.delete('/api/block/:blockId', async (req, res) => {
   }
 });
 
+// Checking block status between two users
+// app.get('/api/users/:profileUser/block-status/:currentUser', async (req, res) => {
+//   console.log('Running block check.')
+//   const { profileUser, currentUser } = req.params;
+
+//   try {
+//     const profileUserData = await User.findOne({ where: { username: profileUser } });
+//     const currentUserData = await User.findOne({ where: { username: currentUser } });
+
+//     if (!profileUserData || !currentUserData) {
+//       return res.status(404).json({ error: 'User not found' });
+//     }
+
+//     const blockStatus = await Block.findOne({
+//       where: {
+//         blocker_id: profileUserData.user_id,
+//         blocked_id: currentUserData.user_id
+//       }
+//     });
+
+//     console.log('profileUserData:', profileUserData);
+//     console.log('currentUserData:', currentUserData);
+//     console.log('blockStatus:', blockStatus);
+
+//     res.json({ isBlocked: !!blockStatus });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).send('Server Error');
+//   }
+// });
+
+// Fetching Block Status: 
+app.get('/api/users/:profileUser/block-status/:currentUser', async (req, res) => {
+  const { profileUser, currentUser } = req.params;
+
+  try {
+    const profileUserData = await User.findOne({ where: { username: profileUser } });
+    const currentUserData = await User.findOne({ where: { username: currentUser } });
+
+    if (!profileUserData || !currentUserData) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const blockStatus = await Block.findOne({
+      where: {
+        [Op.or]: [
+          { blocker_id: profileUserData.user_id, blocked_id: currentUserData.user_id },
+          { blocker_id: currentUserData.user_id, blocked_id: profileUserData.user_id }
+        ]
+      }
+    });
+
+    res.json({ isBlocked: !!blockStatus });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Server Error');
+  }
+});
+
+// Commenting on travelog or other comment
+app.post('/api/comment', async (req, res) => {
+  const { travelog_id, parent_id, user_id, content } = req.body;
+
+  try {
+    if (!travelog_id && !parent_id) {
+      throw new Error('Either travelog_id or parent_id must be provided');
+    }
+
+    try {
+      // Fetch the travelog to get the user ID of the travelog author
+      const travelog = await Travelog.findByPk(travelog_id);
+      if (!travelog || !travelog.user_id) {
+        throw new Error(`Travelog or user ID not found for travelog ID: ${travelog_id}`);
+      }
+    
+      // Fetch the user to get the username for the notification content
+      const user = await User.findByPk(user_id);
+      if (!user) {
+        throw new Error(`User not found for user ID: ${user_id}`);
+      }
+
+      // Now create the comment
+      const comment = await Comment.create({
+        travelog_id,
+        parent_id,
+        user_id,
+        content,
+      });
+    
+      // Now create the notification, using the travelog author's user ID as the recipient_id
+      const notification = await Notification.create({
+        sender_id: user_id,
+        recipient_id: travelog.user_id,  // Use the travelog author's user ID as the recipient_id
+        type: 'comment',
+        content: JSON.stringify({
+          username: user.username,
+          text: 'commented on your post.',
+          url: `/travelog/${travelog_id}`
+        }),
+        expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+      });
+
+      // console.log('Emitting notification to recipient_id:', travelog_id);
+      // io.to(travelog_id.toString()).emit('new-notification', notification);
+      // console.log('Notification emitted');
+
+      res.json({ success: true, comment });
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      res.status(500).send('Server Error');
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).send('Server Error');
+  }
+});
+
+// Fetching comments on TravDet load: 
+app.get('/api/travelog/:travelogId/comments', async (req, res) => {
+  const { travelogId } = req.params;
+
+  try {
+    const comments = await Comment.findAll({
+      where: { travelog_id: travelogId },
+      include: [
+        {
+          model: User,
+          as: 'user',  // Use the correct 'as' value here
+          attributes: ['username']
+        }
+      ],
+      order: [['created_at', 'ASC']]
+    });
+
+    res.json(comments);
+  } catch (error) {
+    console.error('Error fetching comments:', error);
+    res.status(500).send('Server Error');
+  }
+});
+
+// Patch for editing comments
+app.patch('/api/comments/:comment_id', async (req, res) => {
+  try {
+    const { comment_id } = req.params;
+    const { content } = req.body;
+    await Comment.update({ content }, { where: { comment_id } });
+    res.sendStatus(200);
+  } catch (error) {
+    console.error('Error updating comment:', error);
+    res.sendStatus(500);
+  }
+});
+
+// Delete a comment 
+app.delete('/api/comments/:comment_id', async (req, res) => {
+  const { comment_id } = req.params;
+  try {
+    // Find the comment first to check if it exists
+    const comment = await Comment.findOne({ where: { comment_id } });
+    if (!comment) {
+      return res.status(404).json({ success: false, error: 'Comment not found' });
+    }
+    // Destroy the comment
+    await comment.destroy();
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting comment:', error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+});
+
+// Sending messages between users 
+const createRoomId = (id1, id2) => {
+  const ids = [id1, id2].sort((a, b) => a - b);
+  return ids.join('-');
+};
+
+app.post('/api/messages', async (req, res) => {
+  console.log('Request body:', req.body);
+  try {
+    const { caller_id, receiver_id, content } = req.body;  
+
+    // Create a unique identifier for the conversation
+    // const conversationId = createRoomId(caller_id, receiver_id);
+
+    // Create the message in the database
+    const message = await Message.create({
+      caller_id: caller_id,  
+      receiver_id: receiver_id, 
+      content,
+      caller_del: false,
+      receiver_del: false
+    });
+
+    console.log('Created message:', message.toJSON()); 
+
+    // Emit the message to both users' rooms
+    // io.to(`${caller_id}`).emit('new-message', message);
+    io.to(`${receiver_id}`).emit('new-message', message);
+    // io.to(conversationId).emit('new-message', message);
+    // const emitResult1 = io.to(`${caller_id}`).emit('new-message', message);
+    // const emitResult2 = io.to(`${receiver_id}`).emit('new-message', message);
+    // console.log('Emit results:', emitResult1, emitResult2);
+
+    res.json({ success: true, message });
+  } catch (error) {
+    console.error('Error posting message:', error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+});
+
+// Populate the conversation 
+app.get('/api/conversations/:caller_id/:receiver_id', async (req, res) => {
+  try {
+    const { caller_id, receiver_id } = req.params;
+
+    // Find all messages between the two users
+    const messages = await Message.findAll({
+      where: {
+        [Op.or]: [
+          { caller_id: caller_id, receiver_id: receiver_id },
+          { caller_id: receiver_id, receiver_id: caller_id }
+        ]
+      },
+      order: [['createdAt', 'ASC']]  // Order by creation date so messages are in chronological order
+    });
+
+    res.json({ success: true, messages });
+  } catch (error) {
+    console.error('Error fetching conversation:', error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+});
 
 
+// Deleting the conversation between two users 
+app.delete('/api/conversations/:caller_Id/:receiver_Id', async (req, res) => {
+  try {
+    const { caller_Id, receiver_Id } = req.params;
+
+    // Find all messages between the two users
+    const messages = await Message.findAll({
+      where: {
+        [Op.or]: [
+          { caller_Id: caller_Id, receiver_Id: receiver_Id },
+          { caller_Id: receiver_Id, receiver_Id: caller_Id }
+        ]
+      }
+    });
+
+    // Update the deletion flags and check for messages to delete
+    const messagesToDelete = [];
+    for (const message of messages) {
+      if (message.caller_Id === parseInt(caller_Id)) {
+        message.caller_del = true;
+      } else {
+        message.receiver_del = true;
+      }
+      await message.save();
+
+      if (message.caller_del && message.receiver_del) {
+        messagesToDelete.push(message);
+      }
+    }
+
+    // Delete the messages that both users have marked for deletion
+    for (const message of messagesToDelete) {
+      await message.destroy();
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting conversation:', error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+});
 
 // Start the server
 const PORT = process.env.PORT || 5000;
