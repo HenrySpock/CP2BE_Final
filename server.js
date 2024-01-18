@@ -2,765 +2,92 @@ process.env.DEBUG = 'socket.io*';
 
 // Import the required modules
 const express = require('express');
-const cors = require('cors'); // Import the CORS middleware 
+const cors = require('cors');   
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const scheduledJobs = require('./scheduledJobs');
-
-const { sequelize } = require('./models');
+const axios = require('axios');
+const updateLastActive = require('./middleware/updateLastActive');
  
 const bodyParser = require('body-parser');
 
-const { Op } = require('sequelize');
+const Sequelize = require('sequelize');
+
+const { Op, col } = require('sequelize');
 
 // env variables 
 const jwtSecret = process.env.JWT_SECRET; 
 const emailUser = process.env.EMAIL_USER;
 const emailPassword = process.env.EMAIL_PASSWORD; 
 const adminKey = process.env.ADMIN_KEY;
-// const apiKey = 'eit4xzF_srAoQvKkrYZx7ffANGVLGd0zdZjYufIxS-W5VUxpWvURPoQQgY8tL7SiZGm-KsxlmgNlwx0Dnaoa8LD_DNX25jWWsbAab-7QQlf8QTQVxE-bN1EbhLYCZXYx'; 
-const apiKey = process.env.API_KEY;
-
+const apiKey = process.env.API_KEY; 
 
 const http = require('http');
-const socketIo = require('socket.io');
-  
-// Create an Express application
+const { initializeSocket } = require('./routing/socketManager');
+
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server, {
-  cors: {
-      origin: "http://localhost:3000",  // allowing connections from your frontend
-      methods: ["GET", "POST"]
-  }
-});
 
-io.on('connection', (socket) => {
-  console.log('New client connected'); 
-  // Assume userId is passed as a query parameter in the socket connection request
-  const userId = socket.handshake.query.userId;
-  console.log('socket.handshake.query.userId: ', userId)
-  if (userId) {
-    
-    socket.join(userId);
-    // console.log(socket, ' joined by userId: ', userId)
-    // console.log('Rooms:', socket.adapter.rooms);
-    // console.log('Socket.rooms: ', socket.rooms);
-    console.log('Rooms:', io.sockets.adapter.rooms);
-  }
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected');
-    if (userId) {
-      socket.leave(userId);
-    }
-  });
-});
+// Initialize WebSocket
+const io = initializeSocket(server);
 
 app.use(bodyParser.json()); 
-
-// Models: 
-const { User, Image, Interaction, Travelog, Comment, Notification, Message, FeedbackReport, Rating, ForbiddenWord, Friendship, Follow, Block} = require('./models');
-
-// Routes: 
 
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',  // Choose your email provider
+  service: 'gmail', 
   auth: {
-    user: emailUser,  // Your email address
-    pass: emailPassword  // Your email password
+    user: emailUser,  
+    pass: emailPassword  
   }
 });
+
+// Models: 
+const { User, Image, Travelog, Comment, Notification, Message, FeedbackReport, Friendship, Follow, Block, Trip, ProfileLikes, TripLikes, TravLikes, CommentLikes, ImageLikes, Permission, Maintenance, sequelize} = require('./models');
 
 // Set up middleware
 app.use(express.json()); // Example middleware to parse JSON data
 app.use(cors()); // Example middleware to handle CORS
 
 app.use((req, res, next) => {
-  console.log(`Received ${req.method} request on ${req.url}`);
+  // console.log(`Received ${req.method} request on ${req.url}`);
   next();
 });
 
-// Example route: Welcome route
-app.get('/', (req, res) => {
-  res.send('Welcome to your Express.js backend!');
-});
-
-// Example route: API route
-app.get('/api/data', (req, res) => {
-  const data = { message: 'This is an example API endpoint' };
-  res.json(data);
-});
-
-// Example route: Ping route
+// Ping route
 app.get('/ping', (req, res) => {
   res.send('pong');
 });
 
-// Feedback Post Route:
-app.post('/submit-feedback', async (req, res) => {
-  console.log('Received request at /submit-feedback');  // <-- add this line
-  const { name, email, comment } = req.body;
-  console.log(`Name: ${name}, Email: ${email}, Comment: ${comment}`);  // <-- and this line
-  
-  try {
-    await FeedbackReport.create({
-      name,
-      email,
-      content: comment
-    });
-
-    let mailOptions = {
-      from: 'mhenrytillman@gmail.com',  // your email address or a no-reply address
-      to: 'mhenrytillman@gmail.com',  // your email address
-      subject: `Feedback from ${name} (${email})`,
-      text: comment
-    };
-
-    console.log('About to send email');  // <-- add this line
-    transporter.sendMail(mailOptions, function(error, info){
-      if (error) {
-        console.log(error);
-        res.status(500).send('Server error');
-      } else {
-        console.log('Email sent: ' + info.response);
-        res.send('Feedback submitted successfully');
-      }
-    }); 
-    console.log('Called sendMail');  // <-- add this line
- 
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error');
-  }
-});
-
-app.post('/register', async (req, res) => {
-  const {
-    firstName,
-    lastName,
-    username,
-    email,
-    password,
-    retypedPassword,
-    adminKey,
-    securityQuestion,
-    answer,
-    avatar,
-    bio
-  } = req.body;
-  console.log(req.body);
-  if (password !== retypedPassword) {
-    return res.status(400).send({ error: 'Passwords do not match' });
-  }
-
-  const hashedPassword = bcrypt.hashSync(password, 10);
-  const isAdmin = adminKey === process.env.ADMIN_KEY;
-  const avatarUrl = req.body.avatar || 'https://live.staticflickr.com/3557/3449041959_1bd9b05ac8_c.jpg';
-
-  if (adminKey && adminKey !== process.env.ADMIN_KEY) {
-    return res.status(400).send({ error: 'Invalid Admin Key' });
-  }
-
-  try {
-    await User.create({
-      firstName,
-      lastName,
-      username,
-      email,
-      password: hashedPassword,
-      isAdmin,
-      securityQuestion,
-      answer,
-      avatar: avatarUrl,
-      bio
-    });
-    res.send('Registration successful');
-  } catch (error) {
-    console.error(error);
-    if (error.name === 'SequelizeUniqueConstraintError') {
-      // A unique constraint violation occurred, which likely means the username is already taken
-      return res.status(400).send({ error: 'Username exists' });
-    }
-    res.status(500).send({ error: 'Server error' });
-  }
-});
-
- 
-// User Login 
-app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
-
-  try {
-    const user = await User.findOne({ where: { username } });
-    if (!user || !bcrypt.compareSync(password, user.password)) {
-      return res.status(401).send('Invalid credentials');
-    }
-
-    const token = jwt.sign({ userId: user.user_id, isAdmin: user.isAdmin }, jwtSecret); 
-    res.send({ token, user });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error');
-  }
-});
-
-/// GET current user:
-app.get('/user', async (req, res) => {
-  console.log('Headers:', req.headers, ' jwtSecret: ', jwtSecret);
-  
-  const tokenWithBearer = req.headers.authorization;  // This will include 'Bearer '
-
-  // Checking if the authorization header exists and starts with 'Bearer '
-  if (!tokenWithBearer || !tokenWithBearer.startsWith('Bearer ')) {
-    return res.status(403).send('Authorization required');
-  }
-
-  // Extracting the actual token part from the authorization header
-  const actualToken = tokenWithBearer.split(' ')[1];
-  console.log('actualToken: ', jwt.decode(actualToken));
-
-  if (!actualToken) {
-    return res.status(403).send('Authorization required');
-  }
-
-  try {
-    const decodedToken = jwt.verify(actualToken, jwtSecret); 
-    const user = await User.findOne({ where: { user_id: decodedToken.userId } });
-    if (!user) {
-      return res.status(404).send('User not found');
-    }
-    res.send(user);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error');
-  }
-});
-
-// Function for app.get('/api/users/:username' 
-async function getUserByUsername(username) {
-  try {
-    const user = await User.findOne({
-      where: { username: username },
-      attributes: ['avatar', 'bio', 'username', 'user_id']  // Only select these attributes
-    });
-    return user;
-  } catch (error) {
-    console.error(error);
-    throw new Error('Database error');
-  }
-}
-
-// Get a user's public facing profile from Home.js log entries
-app.get('/api/users/:username', (req, res) => {
-  const { username } = req.params;
-  // Assume getUserByUsername is a function that fetches a user by username
-  getUserByUsername(username)
-    .then(user => res.json(user))
-    .catch(error => res.status(500).send({ error: 'Server error' }));
-});
-
-const axios = require('axios');
-
-app.get('/yelp-search', async (req, res) => {
-  try {
-    const { country, city, state, poi } = req.query;
-    const location = `${poi ? poi + ', ' : ''}${city}${state ? ', ' + state : ''}, ${country}`;
-    const term = poi || city;  // search by poi, and if not available, by city
-
-    const yelpResponse = await axios.get('https://api.yelp.com/v3/businesses/search', {
-      params: { term, location, limit: 5 },
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-      },
-    });
-
-    res.json(yelpResponse.data);
-  } catch (error) {
-    console.error('Yelp API error:', error);
-    res.status(500).send('Server error');
-  }
-});
-
-// Posting a travelog 
-app.post('/api/travelog', async (req, res) => {
-  console.log("Received request on /api/travelog");
-  console.log("Request body:", req.body);
-  
-  try {
-    // Save the Travelog data
-    // const travelog = await Travelog.create(req.body);
-
-    const { user_id, ...otherData } = req.body;
-    const newTravelog = await Travelog.create({
-        user_id,
-        ...otherData
-    });
-
-    console.log('Newly created Travelog:', newTravelog);
-    // If images are included, save them as well
-    if (req.body.imageUrls && req.body.imageUrls.length) {
-      const imagesData = req.body.imageUrls.map(url => {
-        return { travelog_id: newTravelog.travelogId, image_url: url }; // Assuming your Travelog model returns an 'id' field
-      });
-      console.log('Images Data to Insert:', imagesData);
-      await Image.bulkCreate(imagesData);  // Sequelize has a 'bulkCreate' method
-    }
-    console.log("Attempting to save text_body:", req.body.textBody);
-    console.log("Attempting to save date_visited:", req.body.dateVisited);
-    res.json({ message: 'Travelog and Images saved successfully', travelog_id: newTravelog.travelog_id, newTravelog });
-
-  } catch (error) {
-    console.error("Detailed error:", error);
-    res.status(500).json({ error: 'Failed to save travelog and/or images.' });
-  }
-});
-
-// Get travelogs for mapping including reported:
-app.get('/api/travelog-entries', async (req, res) => {
-  try {
-      // Fetch the travelog entries with the associated first image and user details
-      const travelogEntries = await Travelog.findAll({
-          include: [{
-              model: Image,
-              as: 'Images',
-              limit: 1, // Limit to the first image
-          }, {
-              model: User,
-              attributes: ['username'] // Only fetch these attributes from the user
-          }],
-          attributes: ['travelog_id', 'site', 'country', 'latitude', 'longitude', 'title', 'date_visited', 'reported', 'created_at'], // Added latitude and longitude
-          order: [['date_visited', 'DESC']],
-          where: {
-              reported: false, // Only fetch entries that are not reported
-              isPrivate: false
-          }
-      });
-
-      console.log('travelogEntries: ', travelogEntries)
-
-      // Return the travelog entries as JSON
-      res.json(travelogEntries);
-  } catch (error) {
-      console.error("Error fetching travelog entries:", error);
-      res.status(500).json({ error: 'Failed to fetch travelog entries.' });
-  }
-});
-
-// Endpoint to get a single travelog by travelog_id
-app.get('/api/travelog/:id', async (req, res) => {
-  try {
-    const travelogId = req.params.id;
-    const travelog = await Travelog.findOne({
-      // where: { travelog_id: travelogId, reported: false },
-      where: { travelog_id: travelogId },
-      include: [
-        {
-          model: Image,
-          as: 'Images',
-        },
-        {
-          model: User,
-          attributes: ['username']
-        }
-      ]
-    });
-    if (travelog) {
-      console.log('Date Visited:', travelog.dateVisited);
-      res.json(travelog);
-    } else {
-      res.status(404).send('Travelog not found');
-    }
-  } catch (error) {
-    console.error("Error fetching travelog:", error);
-    res.status(500).send('Server error');
-  }
-});
-
-// Patch route for updating text details of a Travelog:
-app.patch('/api/travelog/:id', async (req, res) => {
-  try {
-      const { id } = req.params;
-      const { title, site, country, state, city, address, phoneNumber, dateVisited, longitude, latitude, isPrivate, textBody } = req.body;
-
-      // Find the travelog by ID
-      const travelog = await Travelog.findByPk(id);
-
-      if (!travelog) {
-          return res.status(404).json({ error: 'Travelog not found' });
-      }
-
-      // Update the travelog
-      await travelog.update({
-          title,
-          site,
-          country,
-          state,
-          city,
-          address,
-          phoneNumber,
-          dateVisited,
-          longitude,
-          latitude,
-          isPrivate,
-          textBody
-      });
-      
-      res.json(travelog);
-      
-  } catch (error) {
-      console.error('Error updating travelog:', error);
-      res.status(500).json({ error: 'Failed to update travelog' });
-  }
-});
-
-// Route logic for editing / adding / deleting images: 
-app.patch('/api/travelog/:id/images', async (req, res) => {
-  const { id } = req.params;
-  const updatedImages = req.body.images;  // Assume images is an array of image objects
-
-  console.log('Received updated images:', JSON.stringify(updatedImages, null, 2));  // Add this line
-
-  try {
-    // Start a transaction to ensure all operations are atomic
-    await sequelize.transaction(async (t) => {
-      for (const image of updatedImages) {
-        if (image.delete) {
-          // If the image is marked for deletion
-          await Image.destroy({ where: { image_id: image.image_id }, transaction: t });
-        } else if (image.image_id) {
-          // If the image has an id, it's an update
-          // await Image.update({ image_url: image.url }, { where: { id: image.id }, transaction: t });
-          console.log(`Updating image ID: ${image.image_id}, URL: ${image.image_url}`);
-          try {
-            console.log('Image object:', image);
-            console.log('Image ID:', image.id);
-            await Image.update({ image_url: image.image_url }, { where: { image_id: image.image_id }, transaction: t });
-          } catch (error) {
-            console.error('Error updating image:', error);
-          }
-
-        } else {
-          // If the image doesn't have an id, it's a new image
-          // await Image.create({ travelog_id: id, image_url: image.url }, { transaction: t });
-          await Image.create({ travelog_id: id, image_url: image.image_url }, { transaction: t });
-
-        }
-      }
-    });
-
-    res.status(200).send({ message: 'Images updated successfully' });
-  } catch (error) {
-    console.error('Error updating images:', error);
-    res.status(500).send({ message: 'Server error' });
-  }
-});
-
-// Route to Delete Travelog
-app.delete('/api/travelog/:travelogId', async (req, res) => {
-  try {
-    const travelogId = req.params.travelogId;
-    // Assuming you have a Travelog model with a related Images model
-    const travelog = await Travelog.findByPk(travelogId);
-    if (travelog) {
-      await travelog.destroy();  // This will also delete associated images if you have set up cascading deletes
-      res.status(200).send({ message: 'Travelog deleted successfully' });
-    } else {
-      res.status(404).send({ message: 'Travelog not found' });
-    }
-  } catch (error) {
-    console.error('Error deleting travelog:', error);
-    res.status(500).send({ message: 'Server error' });
-  }
-});
-
-app.get('/api/reported-travelogs', async (req, res) => {
-  try {
-    const reportedTravelogs = await Travelog.findAll({
-      include: [{
-          model: Image,
-          as: 'Images',
-          limit: 1, // Limit to the first image
-      }, {
-          model: User,
-          attributes: ['username'] // Only fetch these attributes from the user
-      }],
-      attributes: ['travelog_id', 'site', 'city', 'country', 'latitude', 'longitude', 'title', 'date_visited', 'reported'], // Added latitude and longitude
-      order: [['date_visited', 'DESC']],
-      where: {
-        reported: true
-      }
-    });
-    res.json(reportedTravelogs);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Server Error');
-  }
-});
-
-// Endpoint for reporting a travelog 
-app.patch('/api/travelog/:travelogId/report', async (req, res) => {
-  try {
-    const travelogId = req.params.travelogId;
-    const { reported } = req.body;
-
-    const travelog = await Travelog.findByPk(travelogId);
-    if (travelog) {
-      await travelog.update({ reported });
-      res.status(200).send({ message: 'Travelog reported successfully' });
-    } else {
-      res.status(404).send({ message: 'Travelog not found' });
-    }
-  } catch (error) {
-    console.error('Error reporting travelog:', error);
-    res.status(500).send({ message: 'Server error' });
-  }
-});
-
-// Retrieve travelogs of current user
-app.get('/api/user/:userId/travelogs', async (req, res) => {
-  try {
-    const userId = req.params.userId;
-    const travelogs = await Travelog.findAll({
-      where: { userId },
-      include: [{ model: Image, as: 'Images' }]  // Specify the alias here
-    });
-    res.status(200).send(travelogs);
-  } catch (error) {
-    console.error('Error fetching user travelogs:', error);
-    res.status(500).send({ message: 'Server error' });
-  }
-});
-
-// Geting ids of all friends:
-
-
-// Retrieve filtered travelogs for userhub:
-// app.get('/api/travelogs/filter', async (req, res) => {
-
-//   try {
-//   const { filterType, userId } = req.query;
-
-//   console.log('Filter Type:', filterType);
-//   console.log('User ID:', userId);
-
-//   let travelogs = [];
-  
-//   switch (filterType) {
-//     case 'yourTravelogs':
-//       travelogs = await Travelog.findAll({
-//         where: { userId },
-//         include: [{ model: Image, as: 'Images' }]
-//       });
-//       break;
-//     case 'friendsTravelogs': 
-//       const friendsIds = await getFriendsIds(userId);
-//       travelogs = await Travelog.findAll({
-//         where: { userId: friendsIds },
-//         include: [{ model: Image, as: 'Images' },
-//         { model: User, attributes: ['username'] }
-//       ]
-//       });
-//       break;
-//     // ... handle other filter types similarly
-//     default:
-//       throw new Error('Invalid filter type');
-//   }
-//     res.status(200).send(travelogs);
-// } catch (error) {
-//   console.error('Error fetching filtered travelogs:', error);
-//   res.status(500).send({ message: 'Server error' });
-// }
-// });
-
-// Helper functions to get friends, followers, followings, and friends IDs
-const getFriendsIds = async (userId) => {
-  try {
-    const friendships = await Friendship.findAll({
-      where: {
-        [Op.or]: [{ user1: userId }, { user2: userId }],
-        accepted: true  // Assuming 'accepted' is a boolean column; adjust if it's a string
-      },
-      attributes: ['user1', 'user2']
-    });
-    const friendIds = friendships.map(friendship => {
-      // return friendship.user1 === userId ? friendship.user2 : friendship.user1;
-      return friendship.user1 === parseInt(userId, 10) ? friendship.user2 : friendship.user1;
-
-    });
-    return friendIds;
-  } catch (error) {
-    console.error('Error fetching friend IDs:', error);
-    throw error;  // Propagate error to be handled by the calling function
-  }
-};
-
-const getFollowersIds = async (userId) => {
-  const followers = await Follow.findAll({ where: { followee_id: userId } });
-  return followers.map(follow => follow.follower_id);
-};
-
-const getFollowingsIds = async (userId) => {
-  const followings = await Follow.findAll({ where: { follower_id: userId } });
-  return followings.map(follow => follow.followee_id);
-};
-
-app.get('/api/travelogs/filter', async (req, res) => {
-  try {
-    const { filterType, userId } = req.query;
-    console.log('Filter Type:', filterType);
-    console.log('User ID:', userId);
-
-    let travelogs = [];
-    
-    switch (filterType) {
-      case 'yourTravelogs':
-        travelogs = await Travelog.findAll({
-          where: { userId },
-          include: [{ model: Image, as: 'Images' }]
-        });
-        break;
-      case 'friendsTravelogs': 
-        const friendsIds = await getFriendsIds(userId);
-        const filteredFriendsIds = friendsIds.filter(id => id !== parseInt(userId));  // Exclude current user
-        travelogs = await Travelog.findAll({
-          where: { userId: { [Op.in]: filteredFriendsIds } },  // Using Sequelize's Op.in operator
-          include: [{ model: Image, as: 'Images' },
-          { model: User, attributes: ['username'] }
-        ]
-        });
-        break;
-      case 'followersTravelogs':
-        const followersIds = await getFollowersIds(userId);
-        travelogs = await Travelog.findAll({
-          where: { userId: followersIds },
-          include: [{ model: Image, as: 'Images' },
-          { model: User, attributes: ['username'] }]
-        });
-        break;
-      case 'followingsTravelogs':
-        const followingsIds = await getFollowingsIds(userId);
-        travelogs = await Travelog.findAll({
-          where: { userId: followingsIds },
-          include: [{ model: Image, as: 'Images' },
-          { model: User, attributes: ['username'] }]
-        });
-        break;
-      // ... handle other filter types similarly
-      default:
-        throw new Error('Invalid filter type');
-    }
-    res.status(200).send(travelogs);
-    console.log(travelogs);
-  } catch (error) {
-    console.error('Error fetching filtered travelogs:', error);
-    res.status(500).send({ message: 'Server error' });
-  }
-});
-
-
-
-
-
-// Fetching Profile For Editing User Details
-app.get('/api/user/:userId', async (req, res) => {
-  try {
-    const userId = req.params.userId;
-    const user = await User.findByPk(userId);
-    res.status(200).send(user);
-  } catch (error) {
-    console.error('Error fetching user details:', error);
-    res.status(500).send({ message: 'Server error' });
-  }
-});
-
-// Deleting a User, their travelogs and images. 
-app.delete('/api/user/:userId', async (req, res) => {
-  console.log('req.params: ', req.params)
-  try {
-    const userId = req.params.userId;
-    await User.destroy({ where: { user_id: userId } });
-    res.status(200).send({ message: 'User deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting user:', error);
-    res.status(500).send({ message: 'Server error' });
-  }
-});
- 
-// Updating User Details
-app.patch('/api/user/:userId', async (req, res) => {
-  try {
-    const userId = req.params.userId;
-    const { firstName, lastName, email, securityQuestion, answer, adminKey, avatar, bio } = req.body;
-    const user = await User.findByPk(userId);
-
-    if (!user) {
-      return res.status(404).send('User not found');
-    }
-
-    const isAdmin = adminKey === process.env.ADMIN_KEY;
-
-    if (adminKey && adminKey !== process.env.ADMIN_KEY) {
-      return res.status(400).send('Invalid Admin Key');
-    }
-
-    await user.update({
-      firstName,
-      lastName,
-      email,
-      securityQuestion,
-      answer,
-      isAdmin,
-      avatar,
-      bio
-    });
-
-    // res.send('User details updated successfully');
-    res.json({
-      firstName,
-      lastName,
-      email,
-      securityQuestion,
-      answer,
-      isAdmin,
-      avatar,
-      bio
-    });
-  } catch (error) {
-    console.error('Error updating user details:', error);
-    res.status(500).send('Server error');
-  }
-});
-
-// Changing a password
-app.patch('/api/user/:userId/password', async (req, res) => {
-  try {
-    const userId = req.params.userId;
-    const { oldPassword, newPassword } = req.body;
-    const user = await User.findByPk(userId);
-    
-    if (!user) {
-      return res.status(404).send('User not found');
-    }
-
-    const isPasswordMatch = await bcrypt.compare(oldPassword, user.password);
-    
-    if (!isPasswordMatch) {
-      return res.status(400).send('Old password is incorrect');
-    }
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await user.update({ password: hashedPassword });
-    res.send('Password updated successfully');
-  } catch (error) {
-    console.error('Error updating password:', error);
-    res.status(500).send('Server error');
-  }
-});
-
+// Importing routes files:
+const routesFeedbackReporting = require('./routing/routesFeedbackReporting');   
+const routesAuth = require('./routing/routesAuth')
+const routesUser = require('./routing/routesUser')
+const routesYelp = require('./routing/routesYelp')
+const routesTravelog = require('./routing/routesTravelog')
+const routesTrip = require('./routing/routesTrip')
+const routesTally = require('./routing/routesTally');
+const routesAbaci = require('./routing/routesAbaci')
+const routesRecent = require('./routing/routesRecent')
+const routesViewCount = require('./routing/routesViewCount')
+const routesSearch = require('./routing/routesSearch') 
+
+
+app.use('/feedback', routesFeedbackReporting);
+app.use('/auth', routesAuth);
+app.use('/user', routesUser);
+app.use('/yelp', routesYelp);
+app.use('/travelog', routesTravelog);
+app.use('/trip', routesTrip);
+app.use('/tally', routesTally);
+app.use('/abaci', routesAbaci);
+app.use('/recent', routesRecent);
+app.use('/viewcount', routesViewCount);
+app.use('/search', routesSearch); 
+
+// Interaction Routes 
 // Handle Befriending 
 app.post('/api/friends/request', async (req, res) => {
   const { requester, requestee } = req.body;
@@ -786,27 +113,18 @@ app.post('/api/friends/request', async (req, res) => {
     sender_id: requester,
     type: 'friend-request',
     content: JSON.stringify({
-        text: 'has sent you a friend request',
+        text: 'has sent you a friend request.',
         username: requesterUsername,
         url: `/public_profile/${requesterUsername}`
     }),
     expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
   });
 
-  console.log('Attempting to notify requestee: ', requestee); 
+  // console.log('Attempting to notify requestee: ', requestee); 
 
-  io.to(requestee.toString()).emit('new-notification', notification);
+  io.to(requestee.toString()).emit('new-notification', notification); 
 
-//   io.to(requestee.toString()).emit('new-notification', notification, (acknowledgmentData) => {
-//     if (acknowledgmentData.error) {
-//         console.error('Client reported an error:', acknowledgmentData.error);
-//     } else {
-//         console.log('Acknowledgment received:', acknowledgmentData);
-//     }
-// }
-// );
-
-  console.log(notification, 'successfully emitted to: ', requestee);
+  // console.log(notification, 'successfully emitted to: ', requestee);
 
   res.json({ success: true });
 });
@@ -901,12 +219,12 @@ app.delete('/api/friends/unfriend', async (req, res) => {
       transaction
     });
 
-    console.log('user1:', user1, 'user2:', user2);
+    // console.log('user1:', user1, 'user2:', user2);
     // Emit the unfriend event to both users
     io.to(user1.toString()).emit('unfriend', { user2 });
-    console.log('unfriend event emitted to user1:', user1);
+    // console.log('unfriend event emitted to user1:', user1);
     io.to(user2.toString()).emit('unfriend', { user1 });
-    console.log('unfriend event emitted to user2:', user2);
+    // console.log('unfriend event emitted to user2:', user2);
     
 
     // Commit the transaction
@@ -925,7 +243,7 @@ app.delete('/api/friends/unfriend', async (req, res) => {
 
 // Fetching Friendship Status  
 app.get('/api/friends/status/:user1/:user2', async (req, res) => {
-  console.log('Yes, undefined would be correct')
+  // console.log('Yes, undefined would be correct')
   const { user1, user2 } = req.params;
   
   const friendship = await Friendship.findOne({
@@ -943,7 +261,7 @@ app.get('/api/friends/status/:user1/:user2', async (req, res) => {
 
 // Get all notifications for a specific user
 app.get('/api/notifications/:userId', async (req, res) => {
-  console.log('Received GET request on /api/notifications/' + req.params.userId);
+  // console.log('Received GET request on /api/notifications/' + req.params.userId);
   const { userId } = req.params;
   try {
     const notifications = await Notification.findAll({
@@ -1048,9 +366,9 @@ app.post('/api/friends/request/accept', async (req, res) => {
       expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
     }, { transaction: t });
 
-    console.log('Emitting notification to sender_id:', sender_id);
+    // console.log('Emitting notification to sender_id:', sender_id);
     io.to(sender_id.toString()).emit('new-notification', notification);
-    console.log('Notification emitted');
+    // console.log('Notification emitted');
 
     // Commit the transaction
     await t.commit();
@@ -1102,9 +420,9 @@ app.post('/api/friends/request/undenied', async (req, res) => {
       expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
     }, { transaction: t });
 
-    console.log('Emitting notification to sender_id:', sender_id);
+    // console.log('Emitting notification to sender_id:', sender_id);
     io.to(sender_id.toString()).emit('new-notification', notification);
-    console.log('Notification emitted');
+    // console.log('Notification emitted');
     
     await t.commit();  // Commit the transaction
     res.json({ success: true });
@@ -1158,7 +476,7 @@ app.post('/api/follow', async (req, res) => {
         expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
       });
 
-      console.log('Notification created:', notification);
+      // console.log('Notification created:', notification);
 
       // Emit the notification to the followee
       io.to(followee_id.toString()).emit('new-notification', notification);
@@ -1198,7 +516,7 @@ app.delete('/api/unfollow', async (req, res) => {
 
     // Get the notification_id using the helper function
     const notificationId = await getNotificationId(follower_id, followee_id, t);
-    console.log('follower_id: ', follower_id, 'followee_id: ', followee_id, 'notificationId: ', notificationId);
+    // console.log('follower_id: ', follower_id, 'followee_id: ', followee_id, 'notificationId: ', notificationId);
 
     // Delete the follow relationship
     const deletedRows = await Follow.destroy({
@@ -1220,7 +538,7 @@ app.delete('/api/unfollow', async (req, res) => {
       where: {
         sender_id: follower_id,
         recipient_id: followee_id,
-        type: 'new-follow'  // Adjust the 'type' value to match your setup
+        type: 'new-follow'   
       },
       transaction: t  // Include transaction
     });
@@ -1246,32 +564,87 @@ app.delete('/api/unfollow', async (req, res) => {
   }
 });
 
-// Block a user: 
+// DELETE NOTIFICATION FROM THE DATABASE / DOM 
+app.delete('/api/notifications/delete/:notificationId', async (req, res) => {
+  const { notificationId } = req.params;
+
+  try {
+    // Destroy the notification with the given ID
+    await Notification.destroy({
+      where: { notificationId }
+    });
+    res.json({ success: true, message: 'Notification deleted' });
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    res.status(500).send('Server error');
+  }
+}); 
+
+// Block a user and remove friendship if it exists
 app.post('/api/block', async (req, res) => {
   const { blocker_id, blocked_id } = req.body;
+
   try {
-    await Block.create({ blocker_id, blocked_id });
+    // Begin a transaction
+    const transaction = await sequelize.transaction();
+
+    // Check if there's an existing friendship and delete it
+    await Friendship.destroy({
+      where: {
+        [Op.or]: [
+          { user1: blocker_id, user2: blocked_id },
+          { user1: blocked_id, user2: blocker_id }
+        ]
+      },
+      transaction
+    });
+
+    // Create the block
+    await Block.create({ blocker_id, blocked_id }, { transaction });
+
+    // Commit the transaction
+    await transaction.commit();
+
     res.json({ success: true });
   } catch (error) {
+    // Rollback the transaction if any errors occur
+    await transaction.rollback();
+
     console.error('Error blocking user:', error);
     res.status(500).json({ success: false, error: 'Server error' });
   }
-});
+}); 
 
-// Retrive friends list:
+// MESSAGE COUNTS AND FRIEND/ADMIN CARD POPULATION ON MESSAGES.JS 
+// Helper function to get the count of unread messages
+async function getUnreadMessagesCount(userId, friendId) {
+  try {
+    const count = await Message.count({
+      where: {
+        receiver_id: userId, // Current user must be the receiver
+        caller_id: friendId, // Friend is the sender
+        read: false         // Message is not read
+      }
+    });
+    return count;
+  } catch (error) {
+    console.error('Error counting unread messages:', error);
+    return 0; // Return 0 as a safe default in case of an error
+  }
+} 
+
+// Retrieve friends list and message count
 app.get('/api/friends/:userId', async (req, res) => {
   const userId = parseInt(req.params.userId, 10);
-  // const userId = req.params.userId;  
 
   try {
-    // Fetch friends relationships where the current user is involved
     const friendsRelations = await Friendship.findAll({
       where: {
         [Op.or]: [
           { user1: userId },
           { user2: userId }
         ],
-        accepted: true  // Only fetch accepted friend requests
+        accepted: true
       },
       include: [
         { model: User, as: 'Requester', attributes: ['user_id', 'username', 'avatar'] },
@@ -1279,24 +652,129 @@ app.get('/api/friends/:userId', async (req, res) => {
       ]
     });
 
-    console.log(friendsRelations);  // Log the fetched data
-
-    // Transform data to get a list of friend user objects
-    const friendsList = friendsRelations.map(relation => {
-      // Determine which user is the friend (i.e., not the current user)
-      if (relation.Requester && relation.Requester.user_id !== userId) {
-        return relation.Requester;
-      } else if (relation.Requestee && relation.Requestee.user_id !== userId) {
-        return relation.Requestee;
-      }
-    });
+    // Transform data to get a list of friend user objects with unread message count
+    const friendsListWithUnreadCount = await Promise.all(friendsRelations.map(async relation => {
+      let friend = relation.Requester.user_id !== userId ? relation.Requester : relation.Requestee;
+      friend = friend.get({ plain: true }); // Convert Sequelize model instance to plain object
+      const unreadCount = await getUnreadMessagesCount(userId, friend.user_id);
+      return { ...friend, unreadCount }; // Append unread message count to friend data
+    }));
     
-    res.json(friendsList);
+    res.json(friendsListWithUnreadCount);
   } catch (error) {
     console.error('Error fetching friends:', error);
     res.status(500).send('Internal Server Error');
   }
-});
+}); 
+
+// Helper function to get the count of unread admin messages
+async function getUnreadAdminMessagesCount(userId) {
+  try {
+    const count = await Message.count({
+      where: {
+        receiver_id: userId, // Current user must be the receiver
+        warning: true,       // Message is a warning (admin message)
+        read: false          // Message is not read
+      },
+      include: {
+        model: User,
+        as: 'Sender',
+        where: { is_admin: true } // Sender is an admin
+      }
+    });
+    return count;
+  } catch (error) {
+    console.error('Error counting unread admin messages:', error);
+    return 0; // Return 0 as a safe default in case of an error
+  }
+} 
+
+// Helper function to check 'cleared' status for populating admin card/messages properly:
+async function areAllReportsCleared(userId) {
+  // Check reports directly reported on the user
+  const directReports = await FeedbackReport.count({
+    where: {
+      reported_user_id: userId,
+      cleared: false
+    }
+  });
+
+  if (directReports > 0) return false;
+
+  // Check reports on trips, travelogs, and comments created by the user
+  const associatedReports = await FeedbackReport.count({
+    where: {
+      cleared: false,
+      [Op.or]: [
+        { '$ReportedTrip.user_id$': userId },
+        { '$ReportedTravelog.user_id$': userId },
+        { '$ReportedComment.user_id$': userId }
+      ]
+    },
+    include: [
+      { model: Trip, as: 'ReportedTrip', attributes: [] },
+      { model: Travelog, as: 'ReportedTravelog', attributes: [] },
+      { model: Comment, as: 'ReportedComment', attributes: [] }
+    ]
+  });
+
+  return associatedReports === 0;
+}
+
+app.get('/api/admin-messages/:userId', async (req, res) => {
+  const userId = parseInt(req.params.userId, 10);
+
+  try {
+    const unreadCount = await getUnreadAdminMessagesCount(userId);
+
+    // ADDED 
+    // Calculate the count of read admin messages
+    const readCount = await Message.count({
+      where: { receiver_id: userId, warning: true, read: true }
+    });
+
+    let adminUser = null;
+
+    const allReportsCleared = await areAllReportsCleared(userId);
+    // console.log('ALLREPORTSCLEARED: ', allReportsCleared)
+
+    // if (unreadCount > 0 && !allReportsCleared) {
+    if ((unreadCount > 0 || readCount > 0) && !allReportsCleared) {
+      const adminMessage = await Message.findOne({
+        where: { receiver_id: userId, warning: true, read: false },
+        include: {
+          model: User,
+          as: 'Sender',
+          where: { isAdmin: true },
+          attributes: ['user_id', 'username', 'avatar']
+        }
+      });
+      adminUser = adminMessage ? adminMessage.Sender : null;
+      // console.log('ADMINUSER: ', adminUser)
+    }
+
+    if (unreadCount === 0 && readCount > 0) {
+      adminMessage = await Message.findOne({
+        where: { receiver_id: userId, warning: true, read: true },
+        include: {
+          model: User,
+          as: 'Sender',
+          where: { isAdmin: true },
+          attributes: ['user_id', 'username', 'avatar']
+        }
+      });
+      adminUser = adminMessage ? adminMessage.Sender : null;
+      // console.log('ADMINUSER: ', adminUser)
+    }
+
+
+    // res.json({ adminUser, unreadCount, allReportsCleared });
+    res.json({ adminUser, unreadCount, readCount, allReportsCleared });
+  } catch (error) {
+    console.error('Error fetching admin message:', error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+}); 
 
 // Retrieve followers list:
 app.get('/api/followers/:userId', async (req, res) => {
@@ -1312,7 +790,7 @@ app.get('/api/followers/:userId', async (req, res) => {
       ]
     });
 
-    console.log(followersRelations);  // Log the fetched data
+    // console.log(followersRelations);  // Log the fetched data
 
     // Transform data to get a list of follower user objects
     const followersList = followersRelations.map(relation => relation.Follower);
@@ -1338,7 +816,7 @@ app.get('/api/followings/:userId', async (req, res) => {
       ]
     });
 
-    console.log(followingsRelations);  // Log the fetched data
+    // console.log(followingsRelations);  // Log the fetched data
 
     // Transform data to get a list of followee user objects
     const followingsList = followingsRelations.map(relation => relation.Followee);
@@ -1350,24 +828,6 @@ app.get('/api/followings/:userId', async (req, res) => {
   }
 });
 
-// Disconnections - get all denied users:  
-// app.get('/api/user/:userId/denied-requests', async (req, res) => {
-//   const { userId } = req.params;
-//   try {
-//     const deniedRequests = await Friendship.findAll({
-//       where: {
-//         user2: userId,  // Specify that user2 is the requestee who denied the request
-//         denied: true
-//       },
-//       include: [{ model: User, as: 'Requester' }]  // Only include the Requester model
-//     });
-//     res.json(deniedRequests);
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).send('Server Error');
-//   }
-// });
-
 // Disconnections - get all denied / non-dismissed users:  
 app.get('/api/user/:userId/denied-requests', async (req, res) => {
   const { userId } = req.params;
@@ -1376,7 +836,7 @@ app.get('/api/user/:userId/denied-requests', async (req, res) => {
       where: {
         [Op.or]: [{ user1: userId }, { user2: userId }],
         denied: true,
-        dismissed: false  // <-- Add this line to exclude dismissed requests
+        dismissed: false  // Exclude dismissed requests
       },
       include: [{ model: User, as: 'Requester' }, { model: User, as: 'Requestee' }]
     });
@@ -1394,7 +854,7 @@ app.get('/api/user/:userId/blocked-users', async (req, res) => {
     const blockedUsers = await User.findAll({
       include: {
         model: Block,
-        as: 'blocksReceived',  // Specify the alias of the association you want to include
+        as: 'blocksReceived',  
         where: { blocker_id: userId },
       },
     });
@@ -1420,37 +880,6 @@ app.delete('/api/block/:blockId', async (req, res) => {
     res.status(500).send('Server Error');
   }
 });
-
-// Checking block status between two users
-// app.get('/api/users/:profileUser/block-status/:currentUser', async (req, res) => {
-//   console.log('Running block check.')
-//   const { profileUser, currentUser } = req.params;
-
-//   try {
-//     const profileUserData = await User.findOne({ where: { username: profileUser } });
-//     const currentUserData = await User.findOne({ where: { username: currentUser } });
-
-//     if (!profileUserData || !currentUserData) {
-//       return res.status(404).json({ error: 'User not found' });
-//     }
-
-//     const blockStatus = await Block.findOne({
-//       where: {
-//         blocker_id: profileUserData.user_id,
-//         blocked_id: currentUserData.user_id
-//       }
-//     });
-
-//     console.log('profileUserData:', profileUserData);
-//     console.log('currentUserData:', currentUserData);
-//     console.log('blockStatus:', blockStatus);
-
-//     res.json({ isBlocked: !!blockStatus });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).send('Server Error');
-//   }
-// });
 
 // Fetching Block Status: 
 app.get('/api/users/:profileUser/block-status/:currentUser', async (req, res) => {
@@ -1478,95 +907,212 @@ app.get('/api/users/:profileUser/block-status/:currentUser', async (req, res) =>
     console.error(error);
     res.status(500).send('Server Error');
   }
-});
+}); 
 
-// Commenting on travelog or other comment
-app.post('/api/comment', async (req, res) => {
-  const { travelog_id, parent_id, user_id, content } = req.body;
-
+app.post('/api/comment', updateLastActive, async (req, res) => {
+  const { travelog_id, trip_id, parent_id, user_id, content, username } = req.body;
+  // console.log('user_id on comment', user_id)
   try {
-    if (!travelog_id && !parent_id) {
-      throw new Error('Either travelog_id or parent_id must be provided');
+    if (!travelog_id && !trip_id && !parent_id) {
+      throw new Error('Either travelog_id, trip_id, or parent_id must be provided');
     }
 
-    try {
-      // Fetch the travelog to get the user ID of the travelog author
+    // Initialize recipient_id and redirect URL for notification
+    let recipient_id, redirectUrl;
+
+    // Handle the case when travelog_id is provided
+    if (travelog_id) {
       const travelog = await Travelog.findByPk(travelog_id);
       if (!travelog || !travelog.user_id) {
         throw new Error(`Travelog or user ID not found for travelog ID: ${travelog_id}`);
       }
-    
-      // Fetch the user to get the username for the notification content
-      const user = await User.findByPk(user_id);
-      if (!user) {
-        throw new Error(`User not found for user ID: ${user_id}`);
+
+      recipient_id = travelog.user_id;
+      redirectUrl = `/travelog/${travelog_id}`;
+    }
+
+    // Handle the case when trip_id is provided
+    if (trip_id) {
+      const trip = await Trip.findByPk(trip_id);
+      if (!trip || !trip.user_id) {
+        throw new Error(`Trip or user ID not found for trip ID: ${trip_id}`);
       }
 
-      // Now create the comment
-      const comment = await Comment.create({
-        travelog_id,
-        parent_id,
-        user_id,
-        content,
-      });
-    
-      // Now create the notification, using the travelog author's user ID as the recipient_id
-      const notification = await Notification.create({
-        sender_id: user_id,
-        recipient_id: travelog.user_id,  // Use the travelog author's user ID as the recipient_id
-        type: 'comment',
-        content: JSON.stringify({
-          username: user.username,
-          text: 'commented on your post.',
-          url: `/travelog/${travelog_id}`
-        }),
-        expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
-      });
-
-      // console.log('Emitting notification to recipient_id:', travelog_id);
-      // io.to(travelog_id.toString()).emit('new-notification', notification);
-      // console.log('Notification emitted');
-
-      res.json({ success: true, comment });
-    } catch (error) {
-      console.error('Error posting comment:', error);
-      res.status(500).send('Server Error');
+      recipient_id = trip.user_id;
+      redirectUrl = `/trip/${trip_id}`;
     }
+
+    // Fetch the user to get the username for the notification content
+    const user = await User.findByPk(user_id);
+    if (!user) {
+      throw new Error(`User not found for user ID: ${user_id}`);
+    }
+
+    // Create the comment
+    const comment = await Comment.create({
+      travelog_id,
+      trip_id, // Add trip_id
+      parent_id,
+      user_id,
+      content,
+      username,
+    });
+  
+    // Create the notification, using the travelog/trip author's user ID as the recipient_id
+    const notification = await Notification.create({
+      sender_id: user_id,
+      recipient_id: recipient_id,  // Use the travelog/trip author's user ID as the recipient_id
+      type: 'comment',
+      content: JSON.stringify({
+        username: user.username,
+        text: 'commented on your travelog/trip.',
+        url: redirectUrl
+      }),
+      expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+    });
+
+    res.json({ success: true, comment });
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error posting comment:', error);
     res.status(500).send('Server Error');
   }
-});
+}); 
 
-// Fetching comments on TravDet load: 
-app.get('/api/travelog/:travelogId/comments', async (req, res) => {
-  const { travelogId } = req.params;
+// Helper function to get blocked user ids for travelog/trip author:
+async function getBlockedUserIds(authorId) {
+  const blocks = await Block.findAll({
+    where: { blocker_id: authorId },
+    attributes: ['blocked_id']
+  });
+  return blocks.map(block => block.blocked_id);
+}
 
+// Fetching comments on TravDet/TripDet load:
+app.get('/api/comments', async (req, res) => {
+  const { travelogId, tripId } = req.query;
+  
   try {
-    const comments = await Comment.findAll({
-      where: { travelog_id: travelogId },
+    let authorId;
+    let commentsQueryConditions = [];
+    let comments;  // Initialize the comments variable here
+
+    // Handle travelogId
+    if (travelogId) {
+      const travelog = await Travelog.findOne({
+        where: { travelog_id: travelogId },
+        attributes: ['user_id']
+      });
+      if (!travelog) {
+        return res.status(404).send('Travelog not found');
+      }
+      authorId = travelog.user_id;
+      commentsQueryConditions.push({ travelog_id: travelogId });
+    }
+
+    // Handle tripId
+    if (tripId) {
+      const trip = await Trip.findOne({
+        where: { trip_id: tripId },
+        attributes: ['user_id']
+      });
+      if (!trip) {
+        return res.status(404).send('Trip not found');
+      }
+      authorId = trip.user_id;
+      commentsQueryConditions.push({ trip_id: tripId });
+    }
+
+    if (!authorId) {
+      return res.status(400).send('Either travelogId or tripId must be provided');
+    }
+
+    // Get the list of user IDs that have been blocked by the travelog/trip author
+    const blockedUserIds = await getBlockedUserIds(authorId);
+
+    // Execute the query with the dynamically constructed conditions
+    comments = await Comment.findAll({
+      where: { 
+        [Sequelize.Op.or]: commentsQueryConditions,
+        user_id: { [Sequelize.Op.notIn]: blockedUserIds }
+      },
       include: [
         {
+          model: Comment,
+          as: 'parent',
+          attributes: ['username']
+        },
+        {
+          model: Travelog,
+          as: 'travelog',
+          attributes: ['username']
+        },
+        {
+          model: Trip,
+          as: 'trip',
+          attributes: ['username']
+        },
+        {
           model: User,
-          as: 'user',  // Use the correct 'as' value here
+          as: 'user',
           attributes: ['username']
         }
       ],
       order: [['created_at', 'ASC']]
     });
 
-    res.json(comments);
+    const organizeComments = (parentId = null, depth = 0) => {
+      return comments
+        .filter(comment => comment.parent_id === parentId)
+        .map(comment => {
+          return {
+            ...comment.get(),
+            depth,
+            children: organizeComments(comment.comment_id, depth + 1)
+          };
+        });
+  };
+
+    const nestedComments = organizeComments();
+
+    const flattenComments = (nestedComments) => {
+      let result = [];
+      for (const comment of nestedComments) {
+        const { children, ...commentData } = comment;
+        result.push(commentData);
+        result = result.concat(flattenComments(children));
+      }
+      return result;
+    };
+
+    const flatComments = flattenComments(nestedComments);
+
+    const formattedComments = flatComments.map(comment => ({
+      comment: comment,
+      comment_id: comment.comment_id,
+      content: comment.content,
+      username: comment.user.username,
+      parent: {
+        type: comment.parent_id ? 'comment' : 'travelog',
+        id: comment.parent_id || comment.travelog_id,
+        username:
+          comment.parent_id
+            ? (comment.parent ? comment.parent.username : null)
+            : (comment.travelog ? comment.travelog.username : null)
+      }
+    }));
+
+    res.json(formattedComments);
   } catch (error) {
     console.error('Error fetching comments:', error);
     res.status(500).send('Server Error');
   }
-});
+}); 
 
 // Patch for editing comments
-app.patch('/api/comments/:comment_id', async (req, res) => {
+app.patch('/api/comments/:comment_id', updateLastActive, async (req, res) => {
   try {
-    const { comment_id } = req.params;
-    const { content } = req.body;
+    const { comment_id } = req.params; 
+    const { content, user_id } = req.body;
     await Comment.update({ content }, { where: { comment_id } });
     res.sendStatus(200);
   } catch (error) {
@@ -1576,8 +1122,8 @@ app.patch('/api/comments/:comment_id', async (req, res) => {
 });
 
 // Delete a comment 
-app.delete('/api/comments/:comment_id', async (req, res) => {
-  const { comment_id } = req.params;
+app.delete('/api/comments/:comment_id', updateLastActive, async (req, res) => {
+  const { comment_id, use_id } = req.params;
   try {
     // Find the comment first to check if it exists
     const comment = await Comment.findOne({ where: { comment_id } });
@@ -1593,6 +1139,7 @@ app.delete('/api/comments/:comment_id', async (req, res) => {
   }
 });
 
+// Messaging Routes 
 // Sending messages between users 
 const createRoomId = (id1, id2) => {
   const ids = [id1, id2].sort((a, b) => a - b);
@@ -1600,31 +1147,23 @@ const createRoomId = (id1, id2) => {
 };
 
 app.post('/api/messages', async (req, res) => {
-  console.log('Request body:', req.body);
+  // console.log('Request body:', req.body);
   try {
-    const { caller_id, receiver_id, content } = req.body;  
-
-    // Create a unique identifier for the conversation
-    // const conversationId = createRoomId(caller_id, receiver_id);
-
+    const { caller_id, receiver_id, content, warning } = req.body;  
+ 
     // Create the message in the database
     const message = await Message.create({
       caller_id: caller_id,  
       receiver_id: receiver_id, 
       content,
       caller_del: false,
-      receiver_del: false
+      receiver_del: false,
+      warning: warning,
     });
 
-    console.log('Created message:', message.toJSON()); 
-
-    // Emit the message to both users' rooms
-    // io.to(`${caller_id}`).emit('new-message', message);
-    io.to(`${receiver_id}`).emit('new-message', message);
-    // io.to(conversationId).emit('new-message', message);
-    // const emitResult1 = io.to(`${caller_id}`).emit('new-message', message);
-    // const emitResult2 = io.to(`${receiver_id}`).emit('new-message', message);
-    // console.log('Emit results:', emitResult1, emitResult2);
+    // console.log('Created message:', message.toJSON()); 
+ 
+    io.to(`${receiver_id}`).emit('new-message', message); 
 
     res.json({ success: true, message });
   } catch (error) {
@@ -1641,9 +1180,9 @@ app.get('/api/conversations/:caller_id/:receiver_id', async (req, res) => {
     // Find all messages between the two users
     const messages = await Message.findAll({
       where: {
-        [Op.or]: [
-          { caller_id: caller_id, receiver_id: receiver_id },
-          { caller_id: receiver_id, receiver_id: caller_id }
+        [Op.or]: [ 
+          { caller_id: caller_id, receiver_id: receiver_id, caller_del: false },
+          { caller_id: receiver_id, receiver_id: caller_id, receiver_del: false } 
         ]
       },
       order: [['createdAt', 'ASC']]  // Order by creation date so messages are in chronological order
@@ -1654,55 +1193,1078 @@ app.get('/api/conversations/:caller_id/:receiver_id', async (req, res) => {
     console.error('Error fetching conversation:', error);
     res.status(500).json({ success: false, error: 'Server Error' });
   }
-});
+}); 
 
-
-// Deleting the conversation between two users 
-app.delete('/api/conversations/:caller_Id/:receiver_Id', async (req, res) => {
+app.get('/api/all-conversations/:userId', async (req, res) => {
+  // console.log('NOW HERE*********************')
   try {
-    const { caller_Id, receiver_Id } = req.params;
+    const { userId } = req.params;
 
-    // Find all messages between the two users
-    const messages = await Message.findAll({
+    // This is a hypothetical way to get all conversations. 
+    const conversations = await Message.findAll({
       where: {
-        [Op.or]: [
-          { caller_Id: caller_Id, receiver_Id: receiver_Id },
-          { caller_Id: receiver_Id, receiver_Id: caller_Id }
-        ]
-      }
+        [Op.or]: [{ caller_id: userId }, { receiver_id: userId }]
+      },
+      include: [{ 
+        model: User,
+        as: 'Friend',
+        where: {
+          user_id: { [Op.ne]: userId }
+        },
+        attributes: ['username']  
+      }],
+      order: [['createdAt', 'DESC']]
     });
 
-    // Update the deletion flags and check for messages to delete
-    const messagesToDelete = [];
-    for (const message of messages) {
-      if (message.caller_Id === parseInt(caller_Id)) {
-        message.caller_del = true;
-      } else {
-        message.receiver_del = true;
-      }
-      await message.save();
-
-      if (message.caller_del && message.receiver_del) {
-        messagesToDelete.push(message);
-      }
-    }
-
-    // Delete the messages that both users have marked for deletion
-    for (const message of messagesToDelete) {
-      await message.destroy();
-    }
-
-    res.json({ success: true });
+    res.json({ success: true, conversations: conversations });
   } catch (error) {
-    console.error('Error deleting conversation:', error);
+    console.error('Error fetching all conversations:', error);
     res.status(500).json({ success: false, error: 'Server Error' });
+  }
+}); 
+
+app.delete('/api/conversations/:caller_id/:receiver_id', async (req, res) => {
+  try {
+      const { caller_id, receiver_id } = req.params;
+
+      // Find all messages between the two users
+      const messages = await Message.findAll({
+          where: {
+              [Op.or]: [
+                  { caller_id: caller_id, receiver_id: receiver_id },
+                  { caller_id: receiver_id, receiver_id: caller_id }
+              ]
+          }
+      });
+
+      for (const message of messages) {
+          if (message.caller_id === parseInt(caller_id)) {
+              message.callerDel = true;
+          } else {
+              message.receiverDel = true;
+          }
+          await message.save();
+
+          if (message.callerDel && message.receiverDel) {
+              await message.destroy();
+          }
+      }
+
+      res.json({ success: true });
+  } catch (error) {
+      console.error('Error deleting conversation:', error);
+      res.status(500).json({ success: false, error: 'Server Error' });
   }
 });
 
+// POST /api/notify-user: feedback route with notification / io emit:
+app.post('/api/notify-user', async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    // Create a new notification in the database
+    const notification = await Notification.create({
+      // sender_id: /* Admin's user ID or an identifier */,
+      recipient_id: userId,
+      type: 'Account Warning',  
+      content: JSON.stringify({
+        text: 'Your account is under review. Further action may be taken in 72 hours.',
+      }),
+      expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+      // expiryDate: /* Set an expiry date if needed */,
+    });
+
+    // Emit the notification to the user in real-time  
+    io.to(userId.toString()).emit('new-notification', notification);
+
+    return res.status(200).json({ message: 'Notification sent successfully', notification });
+  } catch (error) {
+    console.error('Error sending notification:', error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+}); 
+
+// ROUTES FOR LIKES
+
+// PROFILE POST
+app.post('/api/likes/profile', updateLastActive, async (req, res) => {
+  const { user_id, liker_id, liketype } = req.body;
+
+  try {
+    const existingLike = await ProfileLikes.findOne({
+      where: { user_id, liker_id, liketype }
+    });
+ 
+    if (existingLike) {
+      // Like exists, so delete it
+      await existingLike.destroy();
+      const existingNotification = await Notification.findOne({
+        where: {
+          sender_id: liker_id,
+          recipient_id: user_id,
+          type: 'profile-like',
+          // Additional where clause to match the notification content if necessary
+        }
+      });
+
+      if (existingNotification) {
+        await existingNotification.destroy();
+      }
+
+      res.json({ success: true, message: 'Like removed, notification destroyed' });
+    } else {
+      // Like doesn't exist, create it
+      await ProfileLikes.create({ user_id, liker_id, liketype });
+
+      // Retrieve the usernames for liker and profile owner
+      const [liker, profileOwner] = await Promise.all([
+        User.findByPk(liker_id, { attributes: ['username'] }),
+        User.findByPk(user_id, { attributes: ['username'] })
+      ]);
+
+      // Send a notification
+      const notification = await Notification.create({
+        sender_id: liker_id,
+        recipient_id: user_id,
+        type: 'profile-like',
+        content: JSON.stringify({
+          likerUsername: liker.username, 
+          text: ` has liked your profile for great ${liketype}.`,
+          likerUrl: `/public_profile/${liker.username}`,
+          entityUrl: `/public_profile/${profileOwner.username}`
+        }),
+        expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+      });
+
+      // Emit notification using socket.io
+      io.to(user_id.toString()).emit('new-notification', notification);
+
+      res.json({ success: true, message: 'Like added' });
+    }
+  } catch (error) {
+    console.error('Error in like handling:', error);
+    res.status(500).send('Server Error');
+  }
+});
+
+// PROFILE GET 
+app.get('/api/likes/profile/check', async (req, res) => {
+  const { user_id, liker_id } = req.query;
+
+  try {
+    const likes = await ProfileLikes.findAll({
+      where: { user_id, liker_id }
+    });
+
+    const likeStatus = likes.reduce((acc, like) => {
+      acc[like.liketype] = true;
+      return acc;
+    }, 
+    { photography: false, writing: false }
+    );
+
+    res.json(likeStatus);
+    // console.log('HEEEEEEEEEEEEEEEEEY res.json(likeStatus): ', likeStatus)
+  } catch (error) {
+    console.error('Error checking like status:', error);
+    res.status(500).send('Server Error');
+  }
+});  
+
+// Endpoint to get likers for photography for a specific user
+app.get('/api/likers/photography', async (req, res) => {
+  const { user_id } = req.query;
+  try {
+    const likers = await ProfileLikes.findAll({
+      where: { 
+        liketype: 'photography',
+        user_id: user_id // Filter by user_id
+      },
+      include: [{ model: User, as: 'Liker', attributes: ['username'] }],
+    });
+
+    res.json(likers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}); 
+
+// Endpoint to get likers for writing for a specific user
+app.get('/api/likers/writing', async (req, res) => {
+  const { user_id } = req.query;
+  try {
+    const likers = await ProfileLikes.findAll({
+      where: { 
+        liketype: 'writing',
+        user_id: user_id // Filter by user_id
+      },
+      include: [{ model: User, as: 'Liker', attributes: ['username'] }],
+    });
+
+    res.json(likers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}); 
+
+// ROUTES FOR LIKES
+// TRIP POST
+app.post('/api/likes/trip', updateLastActive, async (req, res) => { 
+  const { user_id, liker_id, liketype, tripId } = req.body;
+   
+  let condition = { user_id, liker_id, trip_id: tripId, liketype };
+  if (liketype === 'educational-trip') {
+    condition.liketype = 'educational-trip';
+  } else if (liketype === 'writing') {
+    condition.liketype = 'writing';
+  } else {
+    condition.liketype = 'trip';
+  }
+
+  const trip_id = tripId;
+  // console.log('HEEEEEEEEEEEEY tripId: ', trip_id, 'req.body: ', req.body)
+  try {
+    const existingLike = await TripLikes.findOne({
+      where: { user_id, liker_id, liketype, trip_id }
+    });
+
+    if (existingLike) {
+      // Like exists, so delete it
+      await existingLike.destroy();      
+
+      // Also delete the corresponding notification if it exists
+      const existingNotification = await Notification.findOne({
+        where: {
+          sender_id: liker_id,
+          recipient_id: user_id,
+          type: 'trip',
+          // Additional where clause to match the notification content if necessary
+        }
+      });
+
+      if (existingNotification) {
+        await existingNotification.destroy();
+      }
+
+      res.json({ success: true, message: 'Like removed' });
+    } else {
+      // Like doesn't exist, create it
+      await TripLikes.create({ user_id, liker_id, liketype, trip_id: tripId });
+
+      // Send a notification
+      const liker = await User.findByPk(liker_id); 
+      let notificationContent;
+      switch (liketype) {
+        case 'educational-trip':
+          notificationContent = ` has liked your trip as educational.`;
+          break;
+        case 'writing':
+          notificationContent = ` has liked your writing.`;
+          break;
+        default:
+          notificationContent = ` has liked your trip.`;
+      }
+      const notification = await Notification.create({
+        sender_id: liker_id,
+        recipient_id: user_id,
+        type: 'trip',
+        content: JSON.stringify({
+          likerUsername: liker.username,
+          text: notificationContent,
+          // url: `/public_profile/${liker.username}`
+          likerUrl: `/public_profile/${liker.username}`,
+          entityUrl: `/trip_det/${tripId}`
+        }),
+        expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+      });
+ 
+      // Emit notification using socket.io
+      io.to(user_id.toString()).emit('new-notification', notification);
+
+      res.json({ success: true, message: 'Like added' });
+    }
+  } catch (error) {
+    console.error('Error in like handling:', error);
+    res.status(500).send('Server Error');
+  }
+}); 
+ 
+// Getting like for trip/writing/educational-trip button
+app.get('/api/likes/trip/check', async (req, res) => {
+  const { user_id, liker_id, trip_id } = req.query;
+
+  try {
+    const likes = await TripLikes.findAll({
+      where: { user_id, liker_id, trip_id,  liketype: 'trip'  }
+    }); 
+    
+    const likeStatus = { trip: likes.length > 0 };  
+
+    res.json(likeStatus); 
+ 
+    // console.log('HEEEEEEEEEEEEEEEEEY res.json(likeStatus): ', likeStatus)
+  } catch (error) {
+    console.error('Error checking like status:', error);
+    res.status(500).send('Server Error');
+  }
+}); 
+
+app.get('/api/likes/writing/check', async (req, res) => {
+  const { user_id, liker_id, trip_id } = req.query;
+
+  try {
+    const likes = await TripLikes.findAll({
+      where: { user_id, liker_id, trip_id, liketype: 'writing' }
+    });
+
+    const likeStatus = { writing: likes.length > 0 };  
+
+    res.json(likeStatus);
+    // console.log('Writing like status: ', likeStatus);
+  } catch (error) {
+    console.error('Error checking writing like status:', error);
+    res.status(500).send('Server Error');
+  }
+});
+
+app.get('/api/likes/educational-trip/check', async (req, res) => {
+  const { user_id, liker_id, trip_id } = req.query;
+
+  try {
+    const likes = await TripLikes.findAll({
+      where: { user_id, liker_id, trip_id, liketype: 'educational-trip'  }
+    }); 
+    
+    const likeStatus = { educationalTrip: likes.length > 0 };  
+
+    res.json(likeStatus); 
+ 
+    // console.log('HEEEEEEEEEEEEEEEEEY res.json(likeStatus): ', likeStatus)
+  } catch (error) {
+    console.error('Error checking like status:', error);
+    res.status(500).send('Server Error');
+  }
+});  
+
+// Endpoint to get likers for trip
+app.get('/api/likers/trip', async (req, res) => {
+  const { trip_id } = req.query;
+  try {
+    const likers = await TripLikes.findAll({
+      where: { liketype: 'trip', trip_id },  
+      include: [{ model: User, as: 'Liker', attributes: ['username'] }],
+    });
+
+    res.json(likers);
+    // console.log('LIKERS1: ', likers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }});
+
+// Endpoint to get writing likers for trip
+app.get('/api/likers/trip/writing', async (req, res) => {
+  const { trip_id } = req.query;
+  try {
+    const likers = await TripLikes.findAll({
+      where: { liketype: 'writing', trip_id },  
+      include: [{ model: User, as: 'Liker', attributes: ['username'] }],
+    });
+
+    res.json(likers);
+    // console.log('LIKERS1: ', likers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }});
+
+// Endpoint to get likers for educactional trip
+app.get('/api/likers/educational-trip', async (req, res) => {
+  const { trip_id } = req.query;
+  try {
+    const likers = await TripLikes.findAll({
+      where: { liketype: 'educational-trip', trip_id },
+      include: [{ model: User, as: 'Liker', attributes: ['username'] }],
+    });
+
+    res.json(likers);
+    // console.log('LIKERS - Educational Trip: ', likers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+//TRAVELOG LIKE ROUTES
+// TRAV POST
+app.post('/api/likes/travelog', updateLastActive, async (req, res) => {
+  
+  const { user_id, liker_id, liketype, travelog_id } = req.body; 
+  // console.log('HELLO FROM TRAV_LIKES POST travelog_id: ', travelog_id);
+  try {
+    const existingLike = await TravLikes.findOne({
+      where: { user_id, liker_id, liketype, travelog_id }
+    });
+
+    if (existingLike) {
+      // Like exists, so delete it
+      await existingLike.destroy();
+
+
+      // Also delete the corresponding notification if it exists
+      const existingNotification = await Notification.findOne({
+        where: {
+          sender_id: liker_id,
+          recipient_id: user_id,
+          type: 'travelog-like',
+          // Additional where clause to match the notification content if necessary
+        }
+      });
+
+      if (existingNotification) {
+        await existingNotification.destroy();
+      }     
+
+
+      res.json({ success: true, message: 'Like removed' });
+    } else {
+      // Like doesn't exist, create it
+      await TravLikes.create({ user_id, liker_id, liketype, travelog_id });
+
+      // Send a notification
+      const liker = await User.findByPk(liker_id);
+      const notification = await Notification.create({
+        sender_id: liker_id,
+        recipient_id: user_id,
+        type: 'travelog-like',
+        content: JSON.stringify({ 
+          likerUsername: liker.username,
+          text: ` has liked your travelog.`, 
+          likerUrl: `/public_profile/${liker.username}`,
+          entityUrl: `/trav_det/${travelog_id}`
+        }),
+        expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+      });
+ 
+      // Emit notification using socket.io
+      io.to(user_id.toString()).emit('new-notification', notification);
+
+      res.json({ success: true, message: 'Like added' });
+    }
+  } catch (error) {
+    console.error('Error in like handling:', error);
+    res.status(500).send('Server Error');
+  }
+});
+ 
+// TRAV GET 
+app.get('/api/likes/travelog/check', async (req, res) => {
+  const { user_id, liker_id, travelog_id } = req.query;
+  // console.log('APIIIIIIIIIIIIIIII /api/likes/travelog/check: ', travelog_id)
+  try {
+    const likes = await TravLikes.findAll({
+      where: { user_id, liker_id, travelog_id }
+    });
+
+    const likeStatus = likes.reduce((acc, like) => { 
+
+      const key = like.liketype.replace(/-(.)/g, (match, group1) => group1.toUpperCase());
+      acc[key] = true;
+
+      return acc;
+    }, 
+    { wantToTravel: false, traveled: false, retraveled: false, writing: false, informative: false }
+    );
+
+    res.json(likeStatus);
+    // console.log('HEEEEEEEEEEEEEEEEEY res.json(likeStatus): ', likeStatus)
+  } catch (error) {
+    console.error('Error checking like status:', error);
+    res.status(500).send('Server Error');
+  }
+}); 
+ 
+// Endpoint to get likers for want to visit
+app.get('/api/likers/want-to-travel', async (req, res) => {
+  const { travelog_id } = req.query;
+  
+  try {
+    const likers = await TravLikes.findAll({
+      where: { liketype: 'want-to-travel', travelog_id: travelog_id },  
+      include: [{ model: User, as: 'Liker', attributes: ['username'] }],
+    });
+
+    res.json(likers);
+    // console.log('WANT TO TRAVEL LIKERS: ', likers)
+    // console.log('LIKERS1: ', likers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Endpoint to get likers for have visited
+app.get('/api/likers/traveled', async (req, res) => {
+  const { travelog_id } = req.query;
+  // console.log('APIIIIIIIIIIIIIIII api/likers/traveled: ', travelog_id)
+  try {
+    const likers = await TravLikes.findAll({
+      where: { liketype: 'traveled', travelog_id: travelog_id }, 
+      include: [{ model: User, as: 'Liker', attributes: ['username'] }],
+    });
+
+    res.json(likers);
+    // console.log('LIKERS1: ', likers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Endpoint to get likers for want to revisit
+app.get('/api/likers/retraveled', async (req, res) => {
+  const { travelog_id } = req.query;
+  // console.log('APIIIIIIIIIIIIIIII api/likers/retraveled: ', travelog_id)
+  try {
+    const likers = await TravLikes.findAll({
+      where: { liketype: 'retraveled', travelog_id: travelog_id }, 
+      include: [{ model: User, as: 'Liker', attributes: ['username'] }],
+    });
+
+    res.json(likers);
+    // console.log('LIKERS1: ', likers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Endpoint to get likers for writing
+app.get('/api/travelog/likers/writing', async (req, res) => {
+  const { travelog_id } = req.query;
+  try {
+    const likers = await TravLikes.findAll({
+      where: { liketype: 'writing', travelog_id: travelog_id }, // Use 'writing' as liketype
+      include: [{ model: User, as: 'Liker', attributes: ['username'] }],
+    });
+
+    res.json(likers);
+    // console.log('WRITING LIKERS: ', likers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Endpoint to get likers for enjoying educational post
+app.get('/api/likers/informative', async (req, res) => {
+  const { travelog_id } = req.query;
+  // console.log('APIIIIIIIIIIIIIIII api/likers/informative: ', travelog_id)
+  try {
+    const likers = await TravLikes.findAll({
+      where: { liketype: 'informative', travelog_id: travelog_id },  
+      include: [{ model: User, as: 'Liker', attributes: ['username'] }],
+    });
+
+    res.json(likers);
+    // console.log('LIKERS1: ', likers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}); 
+
+// COMMENT LIKES POST
+app.post('/api/likes/comment', updateLastActive, async (req, res) => {
+  // console.log('HELLO');
+  const { user_id, liker_id, liketype, comment_id } = req.body;
+  // console.log('COMMENT_ID: ', comment_id)
+  try {
+    const existingLike = await CommentLikes.findOne({
+      where: { user_id, liker_id, liketype, comment_id }
+    });
+
+    if (existingLike) {
+      // Like exists, so delete it
+      await existingLike.destroy();
+
+
+      // Also delete the corresponding notification if it exists
+      const existingNotification = await Notification.findOne({
+        where: {
+          sender_id: liker_id,
+          recipient_id: user_id, 
+          comment_id: comment_id, 
+        }
+      });
+
+      if (existingNotification) {
+        // console.log('COMMENTS - EXISTINGNOTIFICATION: ', existingNotification)
+        await existingNotification.destroy();
+      }    
+
+
+      res.json({ success: true, message: 'Like removed' });
+    } else {
+      // Like doesn't exist, create it
+      await CommentLikes.create({ user_id, liker_id, liketype, comment_id });
+
+      // Send a notification
+      const liker = await User.findByPk(liker_id);
+      // console.log('TRYING TO INPUT COMMENT_ID: ', comment_id) 
+      const comment = await Comment.findOne({
+        where: { comment_id },
+        include: [
+          { model: Travelog, as: 'travelog', attributes: ['travelog_id'] },
+          { model: Trip, as: 'trip', attributes: ['trip_id'] }
+        ]
+      });
+      // console.log('COMMENT: ', comment) 
+
+      let entityUrl = '';
+      if (comment && comment.travelog_id) {
+        entityUrl = `/trav_det/${comment.travelog_id}?comment=${comment.comment_id}`;
+      } else if (comment && comment.trip_id) {
+        entityUrl = `/trip_det/${comment.trip_id}?comment=${comment.comment_id}`;
+      }
+
+      const notification = await Notification.create({
+        sender_id: liker_id,
+        recipient_id: user_id,
+        comment_id: comment_id,
+        type: 'comment-like',
+        content: JSON.stringify({ 
+          likerUsername: liker.username,
+          text: ` has liked your comment.`, 
+          likerUrl: `/public_profile/${liker.username}`,
+          entityUrl: entityUrl
+        }),
+        expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+      });
+ 
+      // Emit notification using socket.io
+      io.to(user_id.toString()).emit('new-notification', notification);
+
+      res.json({ success: true, message: 'Like added' });
+    }
+  } catch (error) {
+    console.error('Error in like handling:', error);
+    res.status(500).send('Server Error');
+  }
+});
+ 
+// COMMENT LIKES GET 
+app.get('/api/likes/comment/check', async (req, res) => {
+  const { user_id, liker_id, comment_id } = req.query;
+
+  try {
+    const likes = await CommentLikes.findAll({
+      where: { user_id, liker_id, comment_id }
+    }); 
+
+    const likeStatus = { comment: likes.length > 0 }; 
+
+    res.json(likeStatus);
+    // console.log('HEEEEEEEEEEEEEEEEEY res.json(likeStatus): ', likeStatus)
+  } catch (error) {
+    console.error('Error checking like status:', error);
+    res.status(500).send('Server Error');
+  }
+}); 
+ 
+// Endpoint to get likers for  COMMENTS
+app.get('/api/likers/comment', async (req, res) => {
+  const { comment_id } = req.query;
+  // console.log('/api/likers/comment comment_id: ', comment_id)
+  try {
+    const likers = await CommentLikes.findAll({
+      where: { liketype: 'comment', comment_id },  
+      include: [{ model: User, as: 'Liker', attributes: ['username'] }],
+    });
+
+    res.json(likers);
+    // console.log('LIKERS1: ', likers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}); 
+
+// IMAGE LIKES POST
+app.post('/api/likes/image', updateLastActive, async (req, res) => { 
+  const { user_id, liker_id, liketype, image_id } = req.body;
+  try {
+    const existingLike = await ImageLikes.findOne({
+      where: { user_id, liker_id, liketype, image_id }
+    });
+
+    if (existingLike) {
+      await existingLike.destroy();
+
+      // Delete notification if exists
+      const existingNotification = await Notification.findOne({
+        where: {
+          sender_id: liker_id,
+          recipient_id: user_id,
+          type: 'image',
+          image_id: image_id
+        }
+      });
+
+      if (existingNotification) {
+        await existingNotification.destroy();
+      }
+
+      res.json({ success: true, message: 'Like removed' });
+    } else {
+      await ImageLikes.create({ user_id, liker_id, liketype, image_id });
+
+      // Fetch additional details for notification
+      const liker = await User.findByPk(liker_id);
+      const image = await Image.findByPk(image_id);  
+
+      let entityUrl = '';
+      if (image && image.travelog_id) {
+        entityUrl = `/trav_det/${image.travelog_id}?image=${image.image_id}`;
+      }
+
+      // Create notification
+      const notification = await Notification.create({
+        sender_id: liker_id,
+        recipient_id: user_id,
+        type: 'image-like',
+        content: JSON.stringify({
+          likerUsername: liker.username,
+          text: ' has liked your image.',
+          likerUrl: `/public_profile/${liker.username}`,
+          entityUrl: entityUrl
+        }),
+        expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+      });
+
+      // Emit notification
+      io.to(user_id.toString()).emit('new-notification', notification);
+
+      res.json({ success: true, message: 'Like added' });
+    }
+  } catch (error) {
+    console.error('Error in like handling:', error);
+    res.status(500).send('Server Error');
+  }
+});
+
+// Image Likes GET Endpoint 
+app.get('/api/likes/image/check', async (req, res) => {
+  const { user_id, liker_id, image_id } = req.query;
+
+  try {
+    const likes = await ImageLikes.findAll({
+      where: { user_id, liker_id, image_id }
+    });
+
+    const likeStatus = { image: likes.length > 0 };
+    res.json(likeStatus);
+  } catch (error) {
+    console.error('Error checking like status:', error);
+    res.status(500).send('Server Error');
+  }
+});
+
+// Get Likers for Images Endpoint 
+app.get('/api/likers/image', async (req, res) => {
+  const { image_id } = req.query;
+
+  try {
+    const likers = await ImageLikes.findAll({
+      where: { liketype: 'image', image_id },
+      include: [{ model: User, as: 'Liker', attributes: ['username'] }]
+    });
+
+    res.json(likers);
+  } catch (error) {
+    console.error('Error fetching likers:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Permissions routes 
+app.get('/api/permissions/check/:userId', async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+      // Check for any trip or travelog permissions for the user
+      const tripPermission = await Permission.findOne({ where: { grantee_id: userId, trip_id: { [Op.ne]: null } } });
+      const travelogPermission = await Permission.findOne({ where: { grantee_id: userId, travelog_id: { [Op.ne]: null } } });
+
+      const hasPermissions = !!tripPermission || !!travelogPermission;
+      res.json({ hasPermissions });
+  } catch (error) {
+      console.error('Error checking permissions:', error);
+      res.status(500).send('Server error');
+  }
+});
+
+// Fetching permissions for travelog rendering on Private_Logs 
+app.get('/permissions/travelogs/:userId', async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+      const privateTravelogs = await Permission.findAll({
+          where: {
+              grantee_id: userId,
+              travelog_id: { [Op.ne]: null }
+          },
+          include: [{
+            model: Travelog,
+            as: 'Travelog',  
+            include: [{
+                model: Image,  
+                as: 'Images', 
+                order: [['image_id', 'ASC']], // Order by image_id ascending
+                limit: 1 // Limit to only the first image
+            }]
+        }]
+      });
+
+      // Extract the travelogs data and include the images
+      const travelogs = privateTravelogs.map(permission => {
+        // Include only the first image or all images based on your requirement
+        permission.Travelog.dataValues.Images = permission.Travelog.Images.slice(0, 1); 
+        return permission.Travelog;
+      });
+
+      res.json(travelogs);
+  } catch (error) {
+      console.error('Error fetching private travelogs:', error);
+      res.status(500).send('Server error');
+  }
+});
+
+
+// Fetching permissions for trip rendering on Private_Logs 
+app.get('/permissions/trips/:userId', async (req, res) => {
+  const userId = req.params.userId;
+
+  try {
+      const privateTrips = await Permission.findAll({
+          where: {
+              grantee_id: userId,
+              trip_id: { [Op.ne]: null }
+          },
+          include: [{
+              model: Trip,
+              as: 'Trip' // Make sure this alias matches your association
+          }]
+      });
+
+      // Extract the trips data
+      const trips = privateTrips.map(permission => permission.Trip);  
+
+      res.json(trips);
+  } catch (error) {
+      console.error('Error fetching private trips:', error);
+      res.status(500).send('Server error');
+  }
+}); 
+
+// --------------------------------------------------
+// Function to check permission in the database
+async function checkPermission(entityType, entityId, granteeId) {
+  const condition = entityType === 'travelog' ? { travelog_id: entityId } : { trip_id: entityId };
+  const permission = await Permission.findOne({
+    where: {
+      ...condition,
+      grantee_id: granteeId
+    }
+  });
+  return !!permission;
+}
+// Permissions check for trips and travelogs
+// Updated endpoint to check specific permission for entityId and entityType
+app.get('/api/permissions/specific/:userId', async (req, res) => {
+  try {
+    const { entityId, entityType } = req.query;
+    const userId = parseInt(req.params.userId);
+
+    let hasAccess = false;
+    let permissionCondition = {};
+
+    if (entityType === 'travelog') {
+      permissionCondition = { grantee_id: userId, travelog_id: parseInt(entityId) };
+    } else if (entityType === 'trip') {
+      permissionCondition = { grantee_id: userId, trip_id: parseInt(entityId) };
+    } else {
+      return res.status(400).send('Invalid entity type');
+    }
+
+    const permission = await Permission.findOne({ where: permissionCondition });
+    hasAccess = !!permission;
+
+    res.json({ hasAccess });
+  } catch (error) {
+    console.error('Error checking specific permissions:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// --------------------------------------------------
+
+app.patch('/permissions/update', async (req, res) => {
+  try {
+    const updates = req.body; // Expecting an array of updates
+
+    for (const update of updates) {
+      const { granterId, granteeId, tripId, travelogId, action } = update;
+
+      // Convert IDs to integers
+      const granterIdInt = parseInt(granterId);
+      const granteeIdInt = parseInt(granteeId);
+      const tripIdInt = tripId ? parseInt(tripId) : null;
+      const travelogIdInt = travelogId ? parseInt(travelogId) : null;
+
+        if (action === 'grant') {
+        // Add permission
+        await Permission.create({
+          granter_id: granterIdInt,
+          grantee_id: granteeIdInt,
+          trip_id: tripIdInt,
+          travelog_id: travelogIdInt
+        });
+        // Fetch additional details for notification
+        const granter = await User.findByPk(granterId);
+        const granterUsername = granter.username
+        const entityType = tripId ? 'trip' : 'travelog';
+        const entityId = tripId ? tripId : travelogId;
+        const entityUrl = tripId ? `http://localhost:3000/trip_det/${tripId}` : `http://localhost:3000/trav_det/${travelogId}`;
+        // console.log('HEEEEEEEEEEEEY granter', granter.dataValues.username)
+        // Create notification
+        const notification = await Notification.create({
+          sender_id: granterId,
+          recipient_id: granteeId,
+          type: `${entityType}-access-granted`,
+          content: JSON.stringify({
+            text: ` has given you access to their ${entityType}.`,
+            username: granterUsername,
+            entityUrl: entityUrl,
+            url: `/public_profile/${granterUsername}`
+          }),
+          expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+        }); 
+
+        
+        // Emit notification
+        io.to(granteeId.toString()).emit('new-notification', notification);
+      }  else if (action === 'revoke') {
+        // Revoke permission
+        const condition = tripIdInt ? { trip_id: tripIdInt } : { travelog_id: travelogIdInt };
+        await Permission.destroy({
+          where: {
+            granter_id: granterIdInt,
+            grantee_id: granteeIdInt,
+            ...condition
+          }
+        });
+      }
+    }
+
+    res.status(200).json({ message: 'Permissions updated successfully' });
+  } catch (error) {
+    console.error('Error updating permissions:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+
+// MAINTENANCE MODE
+// Schedule maintenance  
+app.post('/api/schedule_maintenance', async (req, res) => {
+  const { startDate, endDate, maintenanceKey, adminId } = req.body;
+  // console.log('req.boyd for maintenance post: ', req.body)
+
+  // Verify if the user is an admin
+  const adminUser = await User.findByPk(adminId);
+  if (!adminUser || !adminUser.isAdmin) {
+    return res.status(403).json({ message: 'Unauthorized: Only admins can schedule maintenance.' });
+  }
+
+  // Insert data into the maintenance_schedule table
+  try {
+    const newMaintenance = await Maintenance.create({
+      admin_id: adminId,
+      timestamp_start: startDate, // map startDate to timestamp_start
+      timestamp_end: endDate,     // map endDate to timestamp_end 
+      maintenance_key: maintenanceKey // map maintenanceKey to maintenance_key
+    });
+
+    res.status(200).json({ message: 'Maintenance scheduled successfully', newMaintenance });
+  } catch (error) {
+    console.error('Error scheduling maintenance:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Fetch maintenance status
+app.get('/api/maintenance/status', async (req, res) => {
+  try {
+    const latestMaintenance = await Maintenance.findOne({ 
+      order: [['timestamp_start', 'DESC']] 
+    });
+
+    if (!latestMaintenance) {
+      return res.status(200).json({ maintenanceActive: false });
+    }
+
+    const currentTime = new Date();
+    const maintenanceActive = currentTime >= latestMaintenance.timestamp_start &&
+                              currentTime <= latestMaintenance.timestamp_end &&
+                              latestMaintenance.maintenance_mode;
+
+    res.status(200).json({ 
+      maintenanceActive, 
+      maintenanceInfo: latestMaintenance 
+    });
+  } catch (error) {
+    console.error('Error fetching maintenance status:', error);
+    res.status(500).send('Server error');
+  }
+});
+
+// Extend maintenance period
+app.patch('/api/extend_maintenance', async (req, res) => {
+  const { extendMaintenanceKey, newEndTime } = req.body;
+
+  try {
+    const maintenance = await Maintenance.findOne({
+      where: { maintenance_key: extendMaintenanceKey }
+    });
+
+    if (!maintenance) {
+      return res.status(404).json({ message: 'Maintenance not found' });
+    }
+
+    // Update the timestamp_end with the new end time
+    maintenance.timestamp_end = newEndTime;
+    await maintenance.save();
+
+    res.status(200).json({ message: 'Maintenance period extended successfully' });
+  } catch (error) {
+    console.error('Error extending maintenance period:', error);
+    res.status(500).send('Server error');
+  }
+}); 
+
 // Start the server
+module.exports = { io };
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  // console.log(`Server is running on port ${PORT}`);
 });
 
 // ***
