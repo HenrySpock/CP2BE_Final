@@ -3,16 +3,20 @@
 const { Sequelize, DataTypes, Model } = require('sequelize');
 // const sequelize = require('sequelize'); 
 
-const DB_USERNAME = process.env.DB_USERNAME
-const DB_PASSWORD = process.env.DB_PASSWORD 
+// Local Connection Setup:
+// This code can be found on the .env file if necessary. 
 
-const sequelize = new Sequelize('castletracker', DB_USERNAME, DB_PASSWORD, {
-  host: 'localhost',
+const DATABASE_URL = process.env.DATABASE_URL
+
+const sequelize = new Sequelize(DATABASE_URL, {
   dialect: 'postgres',
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false // Note: This might be necessary if Render uses self-signed certificates
+    }
+  },
   logging: console.log,
-  define: {
-    underscored: true,
-  }
 });
 
 class User extends Model {}
