@@ -322,7 +322,7 @@ Maintenance.init({
   maintenance_mode: { type: DataTypes.BOOLEAN, allowNull: false },
   maintenance_mode: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
   maintenance_key: { type: DataTypes.STRING, allowNull: false } // New field for maintenance key
-}, { sequelize, modelName: 'Maintenance' });
+}, { sequelize, modelName: 'Maintenance', tableName: 'maintenances' });
 
 class MaintenanceHistory extends Model {}
 MaintenanceHistory.init({
