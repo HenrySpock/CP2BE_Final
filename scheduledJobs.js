@@ -3,7 +3,7 @@ const cron = require('node-cron');
 const { Op, Sequelize } = require('sequelize');  // Import the Op symbol and Sequelize from sequelize
 
 // Schedule a job to run at 5:20 AM daily
-cron.schedule('0 0 * * *', async () => {
+cron.schedule('20 5 * * *', async () => {
   // const thirtySecondsAgo = new Date(new Date() - 30 * 1000);   
   const oneMonthAgo = new Date();
   oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1); 
@@ -50,7 +50,7 @@ cron.schedule('0 5 * * *', async () => {
 });
 
 
-// Schedule a job to run every minute (or any other frequency you prefer)
+// Schedule a job to run every minute 
 cron.schedule('* * * * *', async () => {
   const currentTime = new Date();
 
