@@ -145,7 +145,8 @@ Travelog.init({
   // dateVisited: { type: DataTypes.DATEONLY, allowNull: true },
   dateVisited: { type: DataTypes.DATE, allowNull: true },
   
-  isPrivate: { type: DataTypes.BOOLEAN, defaultValue: false },
+  // isPrivate: { type: DataTypes.BOOLEAN, defaultValue: false },
+  is_private: { type: DataTypes.BOOLEAN, defaultValue: false },
   have_visited: { type: DataTypes.BOOLEAN, defaultValue: false },
   unesco: { type: DataTypes.BOOLEAN, defaultValue: false },
   // film_location: { type: DataTypes.BOOLEAN, defaultValue: false },
@@ -155,7 +156,8 @@ Travelog.init({
   category: { type: DataTypes.STRING },
 
   // reported: { type: Sequelize.BOOLEAN, defaultValue: false }, 
-  tripId: { type: DataTypes.INTEGER, references: { model: Trip, key: 'trip_id' }, allowNull: true },
+  // tripId: { type: DataTypes.INTEGER, references: { model: Trip, key: 'trip_id' }, allowNull: true },
+  trip_id: { type: DataTypes.INTEGER, references: { model: Trip, key: 'trip_id' }, allowNull: true },
   // createdAt: { type: DataTypes.DATEONLY, defaultValue: DataTypes.NOW },
   viewCount: { type: DataTypes.INTEGER, defaultValue: 0 },
 }, { sequelize, modelName: 'Travelog', tableName: 'travelogs' });
