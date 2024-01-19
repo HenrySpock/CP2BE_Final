@@ -41,7 +41,7 @@ User.init({
   mapCenter: { type: DataTypes.ARRAY(DataTypes.FLOAT), defaultValue: [49, 12] },
   userZoom: { type: DataTypes.INTEGER, defaultValue: 4 }, 
   viewCount: { type: DataTypes.INTEGER, defaultValue: 0 },
-}, { sequelize, modelName: 'User' }); 
+}, { sequelize, modelName: 'User', tableName: 'users'  }); 
 
 class Indicator extends Model {}
 Indicator.init({
