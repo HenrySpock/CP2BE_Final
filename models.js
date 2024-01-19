@@ -122,7 +122,8 @@ Trip.init({
 
 class Travelog extends Model {}
 Travelog.init({
-  travelogId: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  // travelogId: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  travelog_id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   userId: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
 
   title: { type: DataTypes.STRING(200), allowNull: false },
