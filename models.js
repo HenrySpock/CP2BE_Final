@@ -157,7 +157,7 @@ Travelog.init({
   tripId: { type: DataTypes.INTEGER, references: { model: Trip, key: 'trip_id' }, allowNull: true },
   // createdAt: { type: DataTypes.DATEONLY, defaultValue: DataTypes.NOW },
   viewCount: { type: DataTypes.INTEGER, defaultValue: 0 },
-}, { sequelize, modelName: 'Travelog' });
+}, { sequelize, modelName: 'Travelog', tableName: 'travelogs' });
 
 class Permission extends Model {}
 Permission.init({
