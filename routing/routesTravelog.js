@@ -72,7 +72,8 @@ router.get('/api/travelog-entries', async (req, res) => {
 
     // Initialize where condition
     let whereCondition = {
-      isPrivate: false
+      // isPrivate: false
+      is_private: false
     };
 
     if (currentUserId) {
