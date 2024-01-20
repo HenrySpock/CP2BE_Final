@@ -79,7 +79,8 @@ router.post('/register', async (req, res) => {
     }
 
     const verificationToken = generateVerificationToken();
-    const verificationLink = `http://localhost:3000/verify_email?token=${verificationToken}`;
+    // const verificationLink = `http://localhost:3000/verify_email?token=${verificationToken}`;
+    const verificationLink = `https://castlingfe.onrender.com/verify_email?token=${verificationToken}`;
 
     const newUser = await User.create({
       firstName,
