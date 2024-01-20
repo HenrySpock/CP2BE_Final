@@ -13,7 +13,8 @@ const router = express.Router();
 router.get('/api/users/newest', async (req, res) => {
   try {
     const newestUser = await User.findOne({
-      order: [['created_at', 'DESC']]
+      // order: [['created_at', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
     // console.log('newestUser: ', newestUser)
     res.json(newestUser);
@@ -27,7 +28,8 @@ router.get('/api/trips/newest', async (req, res) => {
   try {
     const newestTrip = await Trip.findOne({
       include: [{ model: User, as: 'User' }],
-      order: [['created_at', 'DESC']]
+      // order: [['created_at', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
     // console.log('newestTrip: ', newestTrip)
     res.json(newestTrip);
@@ -44,7 +46,8 @@ router.get('/api/travelogs/newest', async (req, res) => {
         { model: User, as: 'User' }, 
         { model: Image, as: 'Images' }
       ], 
-      order: [['created_at', 'DESC']]
+      // order: [['created_at', 'DESC']]
+      order: [['createdAt', 'DESC']]
     });
     // console.log('newestTravelog:', newestTravelog);
     if (!newestTravelog) {
