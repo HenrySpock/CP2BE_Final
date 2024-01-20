@@ -18,6 +18,7 @@ router.get('/api/users/newest', async (req, res) => {
     // console.log('newestUser: ', newestUser)
     res.json(newestUser);
   } catch (error) {
+    console.error('Error fetching newest user:', error);
     res.status(500).send(error.message);
   }
 });
@@ -32,9 +33,10 @@ router.get('/api/trips/newest', async (req, res) => {
     // console.log('newestTrip: ', newestTrip)
     res.json(newestTrip);
   } catch (error) {
+    console.error('Error fetching newest trip:', error);
     res.status(500).send(error.message);
   }
-}); 
+});
 
 // Find most recent travelog 
 router.get('/api/travelogs/newest', async (req, res) => {
