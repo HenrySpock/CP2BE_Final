@@ -39,8 +39,8 @@ User.init({
   map_center: { type: DataTypes.ARRAY(DataTypes.FLOAT), defaultValue: [49, 12] },
   user_zoom: { type: DataTypes.INTEGER, defaultValue: 4 }, 
   view_count: { type: DataTypes.INTEGER, defaultValue: 0 },
-  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, field: 'created_at' },
-  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, field: 'updated_at' }
+  // created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, field: 'created_at' },
+  // updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, field: 'updated_at' }
 }, { sequelize, modelName: 'User', tableName: 'users'  }); 
 
 class Indicator extends Model {}
@@ -81,8 +81,8 @@ TravLikes.init({
   liker_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } }, // user_id of the person liking the button on the profile
   liketype: { type: DataTypes.STRING, allowNull: false }, // 'star'
   travelog_id: DataTypes.INTEGER,  
-  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, field: 'created_at' },
-  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, field: 'updated_at' }
+  // created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, field: 'created_at' },
+  // updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, field: 'updated_at' }
 }, { sequelize, modelName: 'TravLikes', tableName: 'trav_likes' });
 
 class CommentLikes extends Model {}
@@ -103,8 +103,8 @@ ImageLikes.init({
   liker_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } },
   liketype: { type: DataTypes.STRING, allowNull: false },
   image_id: DataTypes.INTEGER, 
-  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, field: 'created_at' },
-  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, field: 'updated_at' }
+  // created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, field: 'created_at' },
+  // updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, field: 'updated_at' }
 }, { sequelize, modelName: 'ImageLikes', tableName: 'image_likes' });
 
 class Trip extends Model {}
