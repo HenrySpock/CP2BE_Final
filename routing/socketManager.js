@@ -4,7 +4,8 @@ const socketIo = require('socket.io');
 function initializeSocket(server) {
   const io = socketIo(server, {
     cors: {
-      origin: "http://localhost:3000",  // allowing connections from frontend
+      // origin: "http://localhost:3000",  // allowing connections from frontend
+      origin: "https://castlingfe.onrender.com",  // allowing connections from frontend
       methods: ["GET", "POST"]
     }
   });
