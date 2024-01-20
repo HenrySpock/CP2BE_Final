@@ -22,25 +22,25 @@ const sequelize = new Sequelize(DATABASE_URL, {
 class User extends Model {}
 User.init({
   user_id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-  firstName: DataTypes.STRING,
-  lastName: DataTypes.STRING,
+  first_name: DataTypes.STRING,
+  last_name: DataTypes.STRING,
   username: { type: DataTypes.STRING, unique: true },
   email: DataTypes.STRING,
   password: DataTypes.STRING,
-  securityQuestion: DataTypes.STRING,
+  security_question: DataTypes.STRING,
   answer: DataTypes.STRING,
   tooltips: { type: DataTypes.BOOLEAN, defaultValue: true },
-  isAdmin: { type: DataTypes.BOOLEAN, defaultValue: false },
-  createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
-  updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  is_admin: { type: DataTypes.BOOLEAN, defaultValue: false },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   avatar: { type: DataTypes.TEXT, allowNull: true },  // New field avatar
   bio: { type: DataTypes.TEXT, allowNull: true },      // New field bio
   verification_token: { type: DataTypes.STRING, allowNull: true },  // New field verification_token
   is_email_verified: { type: DataTypes.BOOLEAN, defaultValue: false },  // New field is_email_verified
 
-  mapCenter: { type: DataTypes.ARRAY(DataTypes.FLOAT), defaultValue: [49, 12] },
-  userZoom: { type: DataTypes.INTEGER, defaultValue: 4 }, 
-  viewCount: { type: DataTypes.INTEGER, defaultValue: 0 },
+  map_center: { type: DataTypes.ARRAY(DataTypes.FLOAT), defaultValue: [49, 12] },
+  user_zoom: { type: DataTypes.INTEGER, defaultValue: 4 }, 
+  view_count: { type: DataTypes.INTEGER, defaultValue: 0 },
 }, { sequelize, modelName: 'User', tableName: 'users'  }); 
 
 class Indicator extends Model {}
@@ -48,7 +48,9 @@ Indicator.init({
   indicator_id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
   user_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } },
   logged_in: { type: DataTypes.BOOLEAN, defaultValue: false },
-  last_active: { type: DataTypes.DATE }
+  last_active: { type: DataTypes.DATE },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'Indicator', tableName: 'indicators' });
 
 class ProfileLikes extends Model {}
@@ -56,7 +58,9 @@ ProfileLikes.init({
   like_id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   user_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } }, // user_id of the public profile
   liker_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } }, // user_id of the person liking the button on the profile
-  liketype: { type: DataTypes.STRING, allowNull: false } // 'book' or 'camera'
+  liketype: { type: DataTypes.STRING, allowNull: false }, // 'book' or 'camera'
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'ProfileLikes', tableName: 'profile_likes' });
 
 class TripLikes extends Model {}
@@ -65,7 +69,9 @@ TripLikes.init({
   user_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } }, // user_id of the public profile
   liker_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } }, // user_id of the person liking the button on the profile
   liketype: { type: DataTypes.STRING, allowNull: false }, // 'star'
-  trip_id: DataTypes.INTEGER
+  trip_id: DataTypes.INTEGER,
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'TripLikes', tableName: 'trip_likes' });
 
 class TravLikes extends Model {}
@@ -74,7 +80,9 @@ TravLikes.init({
   user_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } }, // user_id of the public profile
   liker_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } }, // user_id of the person liking the button on the profile
   liketype: { type: DataTypes.STRING, allowNull: false }, // 'star'
-  travelog_id: DataTypes.INTEGER
+  travelog_id: DataTypes.INTEGER,  
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'TravLikes', tableName: 'trav_likes' });
 
 class CommentLikes extends Model {}
@@ -83,7 +91,9 @@ CommentLikes.init({
   user_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } }, // user_id of the public profile
   liker_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } }, // user_id of the person liking the button on the profile
   liketype: { type: DataTypes.STRING, allowNull: false }, // 'star'
-  comment_id: DataTypes.INTEGER
+  comment_id: DataTypes.INTEGER, 
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'CommentLikes', tableName: 'comment_likes' });
 
 class ImageLikes extends Model {}
@@ -92,7 +102,9 @@ ImageLikes.init({
   user_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } }, 
   liker_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } },
   liketype: { type: DataTypes.STRING, allowNull: false },
-  image_id: DataTypes.INTEGER
+  image_id: DataTypes.INTEGER, 
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'ImageLikes', tableName: 'image_likes' });
 
 class Trip extends Model {}
@@ -106,18 +118,20 @@ Trip.init({
   tripentry: { type: DataTypes.JSONB, allowNull: true },
 
 
-  dateOfDeparture: DataTypes.DATEONLY,
-  dateOfReturn: DataTypes.DATEONLY,
+  date_of_departure: DataTypes.DATEONLY,
+  date_of_return: DataTypes.DATEONLY,
   image_url: { type: DataTypes.STRING }, 
 
   latitude: { type: DataTypes.FLOAT, allowNull: true },
   longitude: { type: DataTypes.FLOAT, allowNull: true },
-  tripZoom: { type: DataTypes.INTEGER, defaultValue: 4 },  // Add a default value of 4 
+  trip_zoom: { type: DataTypes.INTEGER, defaultValue: 4 },  // Add a default value of 4 
 
   // reported: { type: DataTypes.BOOLEAN, defaultValue: false },
-  isPrivate: { type: DataTypes.BOOLEAN, defaultValue: false },
+  is_private: { type: DataTypes.BOOLEAN, defaultValue: false },
   have_visited: { type: DataTypes.BOOLEAN, defaultValue: false },
-  viewCount: { type: DataTypes.INTEGER, defaultValue: 0 },
+  view_count: { type: DataTypes.INTEGER, defaultValue: 0 },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'Trip', tableName: 'trips' });
 
 class Travelog extends Model {}
@@ -160,8 +174,8 @@ Travelog.init({
   trip_id: { type: DataTypes.INTEGER, references: { model: Trip, key: 'trip_id' }, allowNull: true },
   // createdAt: { type: DataTypes.DATEONLY, defaultValue: DataTypes.NOW },
   view_count: { type: DataTypes.INTEGER, defaultValue: 0 },
-  createdAt: { type: DataTypes.DATE, field: 'created_at' },
-  updatedAt: { type: DataTypes.DATE, field: 'updated_at' }
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'Travelog', tableName: 'travelogs', timestamps: true, underscored: true });
 
 class Permission extends Model {}
@@ -171,6 +185,8 @@ Permission.init({
   grantee_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } },
   trip_id: { type: DataTypes.INTEGER, allowNull: true, references: { model: Trip, key: 'trip_id' } },
   travelog_id: { type: DataTypes.INTEGER, allowNull: true, references: { model: Travelog, key: 'travelog_id' } },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'Permission', tableName: 'permissions' });
 
 // New Images Model
@@ -179,19 +195,23 @@ Image.init({
   image_id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   travelog_id: { type: DataTypes.INTEGER, references: { model: Travelog, key: 'travelog_id' } },
   image_url: DataTypes.STRING,
-  viewCount: { type: DataTypes.INTEGER, defaultValue: 0 },
+  view_count: { type: DataTypes.INTEGER, defaultValue: 0 },
   title: { type: DataTypes.STRING(107), allowNull: true, },
   description: { type: DataTypes.STRING(404), allowNull: true, },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'Image', tableName: 'images' });
 
 class Friendship extends Model {}
 Friendship.init({
-  friendshipId: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  friendship_id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   user1: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
   user2: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
   accepted: { type: DataTypes.BOOLEAN, defaultValue: false },
   denied: { type: DataTypes.BOOLEAN, defaultValue: false },
-  dismissed: { type: DataTypes.BOOLEAN, defaultValue: false, }
+  dismissed: { type: DataTypes.BOOLEAN, defaultValue: false, },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW } 
 }, { sequelize, modelName: 'Friendship', tableName: 'friendships' });
 
 // Comment class:
@@ -204,33 +224,34 @@ Comment.init({
   user_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
   parent_id: { type: DataTypes.INTEGER, references: { model: Comment, key: 'comment_id' }, allowNull: true },  // updated line
   content: DataTypes.TEXT,
-  createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
-  updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
-  // reported: { type: DataTypes.BOOLEAN, defaultValue: false },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'Comment', tableName: 'comments' });
 
 // Update to Notification model to handle type of notification
 class Notification extends Model {}
 Notification.init({
-  notificationId: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  notification_id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   sender_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
   recipient_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
   comment_id: { type: DataTypes.INTEGER, references: { model: Comment, key: 'comment_id' }, allowNull: true },
   type: { type: DataTypes.STRING, allowNull: false },
   content: DataTypes.TEXT,
-  expiryDate: DataTypes.DATE,
+  expiry_date: DataTypes.DATE,
   read: { type: DataTypes.BOOLEAN, defaultValue: false },
   dismissed: { type: DataTypes.BOOLEAN, defaultValue: false },
-  createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
-  updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'Notification', tableName: 'notifications' });
 
 class Follow extends Model {}
 Follow.init({
   // followId: { type: DataTypes.UUID, defaultValue: Sequelize.UUIDV4, primaryKey: true },
-  followId: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  follow_id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   follower_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } },
-  followee_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } }
+  followee_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'Follow', tableName: 'follows' });
 
 
@@ -242,30 +263,32 @@ Follow.init({
 
 class Block extends Model {}
 Block.init({
-  blockId: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  block_id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   blocker_id: { type: Sequelize.INTEGER, allowNull: false },
-  blocked_id: { type: Sequelize.INTEGER, allowNull: false }
+  blocked_id: { type: Sequelize.INTEGER, allowNull: false },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'Block', tableName: 'blocks' }); 
 
 class Message extends Model {}
 Message.init({
-  messageId: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  message_id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   caller_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
   receiver_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
-  callerDel: { type: DataTypes.BOOLEAN, defaultValue: false },
-  receiverDel: { type: DataTypes.BOOLEAN, defaultValue: false },
+  caller_del: { type: DataTypes.BOOLEAN, defaultValue: false },
+  receiver_del: { type: DataTypes.BOOLEAN, defaultValue: false },
   content: DataTypes.TEXT,
   read: { type: DataTypes.BOOLEAN, defaultValue: false }, 
 
   warning: { type: DataTypes.BOOLEAN, defaultValue: false },
 
-  createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
-  updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'Message', tableName: 'messages' });
 
 class FeedbackReport extends Model {}
 FeedbackReport.init({
-  reportId: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  report_id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   user_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
   travelog_id: { type: DataTypes.INTEGER, references: { model: Travelog, key: 'travelog_id' } },
   content: DataTypes.TEXT,
@@ -276,11 +299,11 @@ FeedbackReport.init({
   reported_comment_id: { type: DataTypes.INTEGER, references: { model: Comment, key: 'comment_id' } },
   complaint_text: { type: DataTypes.TEXT, allowNull: true, validate: { len: [0, 500] } }, 
 
-  createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
-  updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
   name: { type: DataTypes.STRING, allowNull: false },  // new field for name
   email: { type: DataTypes.STRING, allowNull: false },  // new field for email
   cleared: { type: DataTypes.BOOLEAN, defaultValue: false }, 
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
 }, { sequelize, modelName: 'FeedbackReport', tableName: 'feedback_reports' });
 
  
@@ -288,39 +311,44 @@ FeedbackReport.init({
 
 class Rating extends Model {}
 Rating.init({
-  ratingId: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  rating_id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   user_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
   travelog_id: { type: DataTypes.INTEGER, references: { model: Travelog, key: 'travelog_id' } },
-  ratingColor: DataTypes.STRING,
-  createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
-  updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+  rating_color: DataTypes.STRING,
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'Rating', tableName: 'ratings' });
 
 class ForbiddenWord extends Model {}
 ForbiddenWord.init({
-  wordId: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+  word_id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   word: DataTypes.STRING,
-  createdAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
-  updatedAt: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'ForbiddenWord', tableName: 'forbidden_words' });
 
 class BannedEmails extends Model {}
 BannedEmails.init({
+  id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   email: { type: DataTypes.STRING, allowNull: false, unique: true, },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
   }, { sequelize, modelName: 'banned_emails', });
  
 class Suspension extends Model {}
 Suspension.init({ 
-    userEmail: { type: DataTypes.STRING, allowNull: false, }, 
+    id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+    user_email: { type: DataTypes.STRING, allowNull: false, }, 
+    created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
   }, { sequelize, modelName: 'suspension', });  
 
  class TipTapContent extends Model {}
 TipTapContent.init({
   id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-  content: { 
-    type: DataTypes.JSONB, // Changed to JSONB
-    allowNull: false
-  }
+  content: { type: DataTypes.JSONB, allowNull: false },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 // }, { sequelize, modelName: 'TipTapContent', tableName: 'banned_emails', tableName: 'suspensions' });
 }, { sequelize, modelName: 'TipTapContent', tableName: 'tip_tap_contents' });
 
@@ -333,7 +361,9 @@ Maintenance.init({
   timestamp_start: { type: DataTypes.DATE, allowNull: false },
   timestamp_end: { type: DataTypes.DATE, allowNull: false }, 
   maintenance_mode: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
-  maintenance_key: { type: DataTypes.STRING, allowNull: false } // New field for maintenance key
+  maintenance_key: { type: DataTypes.STRING, allowNull: false }, // New field for maintenance key
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'Maintenance', tableName: 'maintenances' });
 
 class MaintenanceHistory extends Model {}
@@ -342,7 +372,9 @@ MaintenanceHistory.init({
   maintenance_id: { type: DataTypes.INTEGER, allowNull: false },
   actual_start: { type: DataTypes.DATE, allowNull: false },
   actual_end: { type: DataTypes.DATE, allowNull: true },
-  maintenance_key: { type: DataTypes.STRING, allowNull: false }
+  maintenance_key: { type: DataTypes.STRING, allowNull: false },
+  created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+  updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 }, { sequelize, modelName: 'MaintenanceHistory', tableName: 'maintenance_histories' }); 
 
 // Associations for Travelog:  
