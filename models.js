@@ -124,7 +124,7 @@ class Travelog extends Model {}
 Travelog.init({
   // travelogId: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   travelog_id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-  userId: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
+  user_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
 
   title: { type: DataTypes.STRING(200), allowNull: false },
   username: { type: DataTypes.STRING, allowNull: false },
@@ -133,7 +133,7 @@ Travelog.init({
   state: DataTypes.STRING(100), 
   city: DataTypes.STRING(100),
   address: DataTypes.STRING(200),
-  phoneNumber: DataTypes.STRING(30),
+  phone_number: DataTypes.STRING(30),
 
   latitude: { type: DataTypes.FLOAT, allowNull: true },
   longitude: { type: DataTypes.FLOAT, allowNull: true },
@@ -143,7 +143,7 @@ Travelog.init({
 
   // dateVisited: { type: DataTypes.DATE, allowNull: true },
   // dateVisited: { type: DataTypes.DATEONLY, allowNull: true },
-  dateVisited: { type: DataTypes.DATE, allowNull: true },
+  date_visited: { type: DataTypes.DATE, allowNull: true },
   
   // isPrivate: { type: DataTypes.BOOLEAN, defaultValue: false },
   is_private: { type: DataTypes.BOOLEAN, defaultValue: false },
@@ -159,8 +159,10 @@ Travelog.init({
   // tripId: { type: DataTypes.INTEGER, references: { model: Trip, key: 'trip_id' }, allowNull: true },
   trip_id: { type: DataTypes.INTEGER, references: { model: Trip, key: 'trip_id' }, allowNull: true },
   // createdAt: { type: DataTypes.DATEONLY, defaultValue: DataTypes.NOW },
-  viewCount: { type: DataTypes.INTEGER, defaultValue: 0 },
-}, { sequelize, modelName: 'Travelog', tableName: 'travelogs' });
+  view_count: { type: DataTypes.INTEGER, defaultValue: 0 },
+  createdAt: { type: DataTypes.DATE, field: 'created_at' },
+  updatedAt: { type: DataTypes.DATE, field: 'updated_at' }
+}, { sequelize, modelName: 'Travelog', tableName: 'travelogs', timestamps: true, underscored: true });
 
 class Permission extends Model {}
 Permission.init({
