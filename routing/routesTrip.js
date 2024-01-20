@@ -73,7 +73,7 @@ router.get('/api/trips', async (req, res) => {
       order: [['created_at', 'DESC']],
       where: {
         user_id: { [Op.notIn]: blockedUserIds },
-        isPrivate: false
+        is_private: false
       }
     });
 
