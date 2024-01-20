@@ -51,7 +51,8 @@ cron.schedule('0 5 * * *', async () => {
 
 
 // Schedule a job to run every minute 
-cron.schedule('* * * * *', async () => {
+// cron.schedule('* * * * *', async () => {
+cron.schedule('0 5 * * *', async () => {
   const currentTime = new Date();
 
   try {
@@ -85,7 +86,8 @@ cron.schedule('* * * * *', async () => {
 
 
 
-cron.schedule('* * * * *', async () => {  // Runs every minute
+// cron.schedule('* * * * *', async () => {  // Runs every minute
+cron.schedule('0 5 * * *', async () => {  // Runs every minute
   const now = new Date();
 
   try {
