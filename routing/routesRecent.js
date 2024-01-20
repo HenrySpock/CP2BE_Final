@@ -55,7 +55,7 @@ router.get('/api/travelogs/newest', async (req, res) => {
     // console.log('newestTravelog:', newestTravelog);
     if (!newestTravelog) {
       // console.log('No travelog found');
-      return res.status(404).send('No travelog found');
+      return res.status(204).send('No travelogs currently');
     }
     res.json(newestTravelog);
   } catch (error) {
