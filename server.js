@@ -51,8 +51,15 @@ const { User, Image, Travelog, Comment, Notification, Message, FeedbackReport, F
 app.use(express.json()); // Example middleware to parse JSON data
 app.use(cors()); // Example middleware to handle CORS
 
+// app.use((req, res, next) => {
+//   // console.log(`Received ${req.method} request on ${req.url}`);
+//   next();
+// });
+
 app.use((req, res, next) => {
-  // console.log(`Received ${req.method} request on ${req.url}`);
+  res.setHeader('Access-Control-Allow-Origin', 'https://castlingfe.onrender.com');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   next();
 });
 
