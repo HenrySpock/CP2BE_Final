@@ -39,6 +39,7 @@ const transporter = nodemailer.createTransport({
 
 // Register a user 
 router.post('/register', async (req, res) => {
+  console.log('registering user on backend: ', req.body)
   const {
     first_name,
     last_name,
