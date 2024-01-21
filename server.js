@@ -280,7 +280,7 @@ app.get('/api/notifications/:userId', async (req, res) => {
         { model: User, as: 'Sender', attributes: ['username'] },
         { model: User, as: 'Recipient', attributes: ['username'] }
       ],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
     res.json(notifications);
   } catch (error) {
@@ -1192,7 +1192,7 @@ app.get('/api/conversations/:caller_id/:receiver_id', async (req, res) => {
           { caller_id: receiver_id, receiver_id: caller_id, receiver_del: false } 
         ]
       },
-      order: [['createdAt', 'ASC']]  // Order by creation date so messages are in chronological order
+      order: [['created_at', 'ASC']]  // Order by creation date so messages are in chronological order
     });
 
     res.json({ success: true, messages });
@@ -1220,7 +1220,7 @@ app.get('/api/all-conversations/:userId', async (req, res) => {
         },
         attributes: ['username']  
       }],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
 
     res.json({ success: true, conversations: conversations });
