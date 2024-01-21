@@ -318,7 +318,7 @@ router.get('/api/user/:user_id/travelogs', async (req, res) => {
 
 router.get('/api/travelogs/filter', async (req, res) => {
   try {
-    const { filterType, userId } = req.query;
+    const { filterType, user_id } = req.query;
     // console.log('Filter Type:', filterType);
     // console.log('User ID:', userId);
 
@@ -327,13 +327,13 @@ router.get('/api/travelogs/filter', async (req, res) => {
     switch (filterType) {
       case 'yourTravelogs':
         travelogs = await Travelog.findAll({
-          where: { userId },
+          where: { user_id },
           include: [{ model: Image, as: 'Images' }]
         });
         break;
       case 'friendsTravelogs': 
-        const friendsIds = await getFriendsIds(userId);
-        const filteredFriendsIds = friendsIds.filter(id => id !== parseInt(userId));  // Exclude current user
+        const friendsIds = await getFriendsIds(user_id);
+        const filteredFriendsIds = friendsIds.filter(id => id !== parseInt(user_id));  // Exclude current user
         travelogs = await Travelog.findAll({
           where: { userId: { [Op.in]: filteredFriendsIds } },  
           include: [{ model: Image, as: 'Images' },
@@ -342,7 +342,7 @@ router.get('/api/travelogs/filter', async (req, res) => {
         });
         break;
       case 'followersTravelogs':
-        const followersIds = await getFollowersIds(userId);
+        const followersIds = await getFollowersIds(user_id);
         travelogs = await Travelog.findAll({
           where: { userId: followersIds },
           include: [{ model: Image, as: 'Images' },
@@ -350,7 +350,7 @@ router.get('/api/travelogs/filter', async (req, res) => {
         });
         break;
       case 'followingsTravelogs':
-        const followingsIds = await getFollowingsIds(userId);
+        const followingsIds = await getFollowingsIds(user_id);
         travelogs = await Travelog.findAll({
           where: { userId: followingsIds },
           include: [{ model: Image, as: 'Images' },
