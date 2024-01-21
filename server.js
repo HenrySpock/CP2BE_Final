@@ -331,18 +331,77 @@ async function getUserById(user_id) {
 }
 
 // Accept a friend request from notification
-app.post('/api/friends/request/accept', async (req, res) => {
-  const { sender_id, recipient_id, notificationId } = req.body;
+// app.post('/api/friends/request/accept', async (req, res) => {
+//   const { sender_id, recipient_id, notification_id } = req.body;
   
+//   try {
+//     // Start a transaction
+//     const t = await sequelize.transaction();
+
+//     // Fetch the recipient's username
+//     const recipient = await getUserById(recipient_id);
+
+//     if (!recipient) {
+//       await t.rollback();
+//       return res.status(404).json({ error: 'Recipient not found' });
+//     }
+
+//     const recipientUsername = recipient.username;
+
+//     // Update the friendship status
+//     await Friendship.update(
+//       { accepted: true },
+//       { where: { user1: sender_id, user2: recipient_id }, transaction: t }
+//     );
+
+//     // Dismiss the old notification
+//     await Notification.update(
+//       { dismissed: true },
+//       { where: { notification_id: notification_id }, transaction: t }
+//     );
+
+//     // await Notification.create({
+//     const notification = await Notification.create({
+//       sender_id: recipient_id,
+//       recipient_id: sender_id,
+//       type: 'friend-request-accepted',
+//       content: JSON.stringify({
+//         username: recipientUsername,
+//         text: 'has accepted your friend request.',
+//         url: `/public_profile/${recipientUsername}`
+//       }), 
+//       expiry_date: new Date(new Date().setMonth(new Date().getMonth() + 1))
+//     }, { transaction: t });
+
+//     // console.log('Emitting notification to sender_id:', sender_id);
+//     io.to(sender_id.toString()).emit('new-notification', notification);
+//     // console.log('Notification emitted');
+
+//     // Commit the transaction
+//     await t.commit();
+
+//     res.json({ success: true });
+//   } catch (error) {
+//     // Rollback the transaction in case of an error
+//     await t.rollback();
+//     console.error('Error accepting friend request:', error);
+//     res.status(500).send('Server Error');
+//   }
+// });
+
+app.post('/api/friends/request/accept', async (req, res) => {
+  const { sender_id, recipient_id, notification_id } = req.body;
+  let t;
+
   try {
     // Start a transaction
-    const t = await sequelize.transaction();
+    t = await sequelize.transaction();
 
     // Fetch the recipient's username
     const recipient = await getUserById(recipient_id);
 
     if (!recipient) {
-      await t.rollback();
+      if (t) await t.rollback();
       return res.status(404).json({ error: 'Recipient not found' });
     }
 
@@ -357,10 +416,10 @@ app.post('/api/friends/request/accept', async (req, res) => {
     // Dismiss the old notification
     await Notification.update(
       { dismissed: true },
-      { where: { notification_id: notificationId }, transaction: t }
+      { where: { notification_id: notification_id }, transaction: t }
     );
 
-    // await Notification.create({
+    // Create the new notification
     const notification = await Notification.create({
       sender_id: recipient_id,
       recipient_id: sender_id,
@@ -370,12 +429,11 @@ app.post('/api/friends/request/accept', async (req, res) => {
         text: 'has accepted your friend request.',
         url: `/public_profile/${recipientUsername}`
       }), 
-      expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+      expiry_date: new Date(new Date().setMonth(new Date().getMonth() + 1))
     }, { transaction: t });
 
-    // console.log('Emitting notification to sender_id:', sender_id);
+    // Emit the notification
     io.to(sender_id.toString()).emit('new-notification', notification);
-    // console.log('Notification emitted');
 
     // Commit the transaction
     await t.commit();
@@ -383,11 +441,12 @@ app.post('/api/friends/request/accept', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     // Rollback the transaction in case of an error
-    await t.rollback();
+    if (t) await t.rollback();
     console.error('Error accepting friend request:', error);
     res.status(500).send('Server Error');
   }
 });
+
 
 // Accept a denied friend request from notification
 app.post('/api/friends/request/undenied', async (req, res) => {
