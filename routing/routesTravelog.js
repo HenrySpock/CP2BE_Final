@@ -48,7 +48,7 @@ router.post('/api/travelog', updateLastActive, async (req, res) => {
     // If images are included, save them as well
     if (req.body.imageUrls && req.body.imageUrls.length) {
       const imagesData = req.body.imageUrls.map(url => {
-        return { travelog_id: newTravelog.travelogId, image_url: url }; 
+        return { travelog_id: newTravelog.travelog_id, image_url: url }; 
       });
       // console.log('Images Data to Insert:', imagesData);
       await Image.bulkCreate(imagesData);   
