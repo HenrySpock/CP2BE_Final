@@ -130,9 +130,9 @@ router.get('/api/travelog-entries', async (req, res) => {
 router.get('/api/travelog/:id', async (req, res) => {
   try {
     // console.log('************ TRAVDET ISSUE REQ.PARAMS: ', req.params)
-    const travelogId = req.params.id;
+    const travelog_id = req.params.id;
     const travelog = await Travelog.findOne({ 
-      where: { travelog_id: travelogId },
+      where: { travelog_id: travelog_id },
       include: [
         {
           model: Image,
