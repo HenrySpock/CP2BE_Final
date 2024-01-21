@@ -72,7 +72,7 @@ router.post('/register', async (req, res) => {
 
     const hashedPassword = bcrypt.hashSync(password, 10);
     const hashedAnswer = bcrypt.hashSync(answer, 10); 
-    const isAdmin = adminKey === process.env.ADMIN_KEY;
+    const is_admin = adminKey === process.env.ADMIN_KEY;
     const avatarUrl = avatar || 'https://live.staticflickr.com/3557/3449041959_1bd9b05ac8_c.jpg';
 
     if (adminKey && adminKey !== process.env.ADMIN_KEY) {
@@ -89,7 +89,7 @@ router.post('/register', async (req, res) => {
       username,
       email,
       password: hashedPassword,
-      isAdmin,
+      is_admin,
       security_question,
       answer: hashedAnswer,
       avatar: avatarUrl,
@@ -139,7 +139,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).send('Invalid credentials');
     }
 
-    const token = jwt.sign({ userId: user.user_id, isAdmin: user.isAdmin }, jwtSecret); 
+    const token = jwt.sign({ userId: user.user_id, is_admin: user.is_admin }, jwtSecret); 
     res.send({ token, user });
   } catch (error) {
     console.error(error);
