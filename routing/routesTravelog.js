@@ -302,9 +302,9 @@ router.delete('/api/travelog/:travelogId', updateLastActive, async (req, res) =>
 });
 
 // Retrieve travelogs of a given user
-router.get('/api/user/:userId/travelogs', async (req, res) => {
+router.get('/api/user/:user_id/travelogs', async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const user_id = req.params.userId;
     const travelogs = await Travelog.findAll({
       where: { user_id },
       include: [{ model: Image, as: 'Images' }]  // Specify the alias here
