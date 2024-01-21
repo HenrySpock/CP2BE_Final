@@ -306,7 +306,7 @@ router.get('/api/user/:userId/travelogs', async (req, res) => {
   try {
     const userId = req.params.userId;
     const travelogs = await Travelog.findAll({
-      where: { userId },
+      where: { user_id },
       include: [{ model: Image, as: 'Images' }]  // Specify the alias here
     });
     res.status(200).send(travelogs);
