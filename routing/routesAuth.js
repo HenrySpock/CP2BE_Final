@@ -47,7 +47,7 @@ router.post('/register', async (req, res) => {
     password,
     retypedPassword,
     adminKey,
-    securityQuestion,
+    security_question,
     answer,
     avatar,
     bio
@@ -89,7 +89,7 @@ router.post('/register', async (req, res) => {
       email,
       password: hashedPassword,
       isAdmin,
-      securityQuestion,
+      security_question,
       answer: hashedAnswer,
       avatar: avatarUrl,
       bio, 
@@ -219,8 +219,8 @@ router.get('/verification_check', async (req, res) => {
 });
 
 router.post('/api/user/validate_security_answer', async (req, res) => {
-  const { email, securityQuestion, securityAnswer } = req.body; 
-  // console.log('HERE, EMAIL SECURITYQUESTION SECURITYANSWER', email, securityQuestion, securityAnswer)
+  const { email, security_question, securityAnswer } = req.body; 
+  // console.log('HERE, EMAIL SECURITYQUESTION SECURITYANSWER', email, security_question, securityAnswer)
   try {
     const user = await User.findOne({ where: { email } }); 
     if (!user) {
@@ -231,7 +231,7 @@ router.post('/api/user/validate_security_answer', async (req, res) => {
     // console.log('securityAnswer, user.answer: ', securityAnswer, user.answer)
 
     // Check if both the security question and the answer match
-    if (user.securityQuestion !== securityQuestion || !bcrypt.compareSync(securityAnswer, user.answer)) {
+    if (user.security_question !== security_question || !bcrypt.compareSync(securityAnswer, user.answer)) {
       return res.status(400).send('Invalid security question or answer');
     } 
 
