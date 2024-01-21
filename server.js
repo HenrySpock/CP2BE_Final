@@ -996,7 +996,7 @@ async function getBlockedUserIds(authorId) {
 
 // Fetching comments on TravDet/TripDet load:
 app.get('/api/comments', async (req, res) => {
-  const { travelogId, tripId } = req.query;
+  const { travelog_id, trip_id } = req.query;
   
   try {
     let authorId;
@@ -1004,33 +1004,33 @@ app.get('/api/comments', async (req, res) => {
     let comments;  // Initialize the comments variable here
 
     // Handle travelogId
-    if (travelogId) {
+    if (travelog_id) {
       const travelog = await Travelog.findOne({
-        where: { travelog_id: travelogId },
+        where: { travelog_id: travelog_id },
         attributes: ['user_id']
       });
       if (!travelog) {
         return res.status(404).send('Travelog not found');
       }
       authorId = travelog.user_id;
-      commentsQueryConditions.push({ travelog_id: travelogId });
+      commentsQueryConditions.push({ travelog_id: travelog_id });
     }
 
     // Handle tripId
-    if (tripId) {
+    if (trip_id) {
       const trip = await Trip.findOne({
-        where: { trip_id: tripId },
+        where: { trip_id: trip_id },
         attributes: ['user_id']
       });
       if (!trip) {
         return res.status(404).send('Trip not found');
       }
       authorId = trip.user_id;
-      commentsQueryConditions.push({ trip_id: tripId });
+      commentsQueryConditions.push({ trip_id: trip_id });
     }
 
     if (!authorId) {
-      return res.status(400).send('Either travelogId or tripId must be provided');
+      return res.status(400).send('Either travelog_id or trip_id must be provided');
     }
 
     // Get the list of user IDs that have been blocked by the travelog/trip author
