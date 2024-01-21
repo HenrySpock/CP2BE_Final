@@ -229,7 +229,7 @@ router.post('/api/user/validate_security_answer', async (req, res) => {
     }
 
     // console.log('HERE HERE')
-    // console.log('answer, user.answer: ', answer, user.answer)
+    console.log('answer, user.answer: ', answer, user.answer)
 
     // Check if both the security question and the answer match
     if (user.security_question !== security_question || !bcrypt.compareSync(answer, user.answer)) {
