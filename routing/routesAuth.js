@@ -40,8 +40,8 @@ const transporter = nodemailer.createTransport({
 // Register a user 
 router.post('/register', async (req, res) => {
   const {
-    firstName,
-    lastName,
+    first_name,
+    last_name,
     username,
     email,
     password,
@@ -83,8 +83,8 @@ router.post('/register', async (req, res) => {
     const verificationLink = `https://castlingfe.onrender.com/verify_email?token=${verificationToken}`;
 
     const newUser = await User.create({
-      firstName,
-      lastName,
+      first_name,
+      last_name,
       username,
       email,
       password: hashedPassword,
