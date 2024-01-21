@@ -391,6 +391,7 @@ async function getUserById(user_id) {
 
 app.post('/api/friends/request/accept', async (req, res) => {
   const { sender_id, recipient_id, notification_id } = req.body;
+  console.log('req.body', req.body)
   let t;
 
   try {
