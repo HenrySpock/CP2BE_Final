@@ -165,12 +165,12 @@ router.get('/api/tripdet/:tripId', async (req, res) => {
 });
 
 // GET travelogs for a specific trip by trip_id
-router.get('/api/travelogs/:tripId', async (req, res) => {
-  const { tripId } = req.params;
+router.get('/api/travelogs/:trip_id', async (req, res) => {
+  const { trip_id } = req.params;
 
   try {
     const travelogs = await Travelog.findAll({
-      where: { tripId: tripId },
+      where: { trip_id: trip_id },
       include: [{
         model: Image,
         as: 'Images',
