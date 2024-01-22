@@ -42,8 +42,8 @@ router.post('/submit-feedback', async (req, res) => {
     });
 
     let mailOptions = {
-      from: 'mhenrytillman@gmail.com',   
-      to: 'mhenrytillman@gmail.com', 
+      from: 'letsgocastling@gmail.com',   
+      to: 'letsgocastling@gmail.com', 
       subject: `Feedback from ${name} (${email})`,
       text: comment
     };
