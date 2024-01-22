@@ -632,13 +632,13 @@ app.delete('/api/unfollow', async (req, res) => {
 });
 
 // DELETE NOTIFICATION FROM THE DATABASE / DOM 
-app.delete('/api/notifications/delete/:notificationId', async (req, res) => {
-  const { notificationId } = req.params;
+app.delete('/api/notifications/delete/:notification_id', async (req, res) => {
+  const { notification_id } = req.params;
 
   try {
     // Destroy the notification with the given ID
     await Notification.destroy({
-      where: { notificationId }
+      where: { notification_id }
     });
     res.json({ success: true, message: 'Notification deleted' });
   } catch (error) {
