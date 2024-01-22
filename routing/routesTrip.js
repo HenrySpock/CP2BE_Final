@@ -94,7 +94,7 @@ router.get('/api/trips/:user_id', async (req, res) => {
       where: { user_id: user_id },
       attributes: ['trip_id', 'title', 'date_of_departure', 'date_of_return', 'latitude', 'longitude', 'image_url', 'username', 'is_private', 'have_visited'], 
     });
-    // console.log('userTrips: ', userTrips);
+    console.log('userTrips: ', userTrips);
     
     res.status(200).json(userTrips);
   } catch (error) {
