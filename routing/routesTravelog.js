@@ -67,7 +67,7 @@ router.post('/api/travelog', updateLastActive, async (req, res) => {
 router.get('/api/travelog-entries', async (req, res) => {
   try {
     // Extract user_id from query parameters
-    const currentUserId = req.query.userId ? parseInt(req.query.userId) : null;
+    const currentUserId = req.query.user_id ? parseInt(req.query.user_id) : null;
     let limit = currentUserId ? null : 5; // Limit for non-logged-in users
 
     // Initialize where condition
@@ -319,7 +319,7 @@ router.get('/api/travelogs/filter', async (req, res) => {
   try {
     const { filterType, user_id } = req.query;
     // console.log('Filter Type:', filterType);
-    // console.log('User ID:', userId);
+    // console.log('User ID:', user_id);
 
     let travelogs = [];
     
@@ -334,7 +334,7 @@ router.get('/api/travelogs/filter', async (req, res) => {
         const friendsIds = await getFriendsIds(user_id);
         const filteredFriendsIds = friendsIds.filter(id => id !== parseInt(user_id));  // Exclude current user
         travelogs = await Travelog.findAll({
-          where: { userId: { [Op.in]: filteredFriendsIds } },  
+          where: { user_id: { [Op.in]: filteredFriendsIds } },  
           include: [{ model: Image, as: 'Images' },
           { model: User, attributes: ['username'] }
         ]
@@ -343,7 +343,7 @@ router.get('/api/travelogs/filter', async (req, res) => {
       case 'followersTravelogs':
         const followersIds = await getFollowersIds(user_id);
         travelogs = await Travelog.findAll({
-          where: { userId: followersIds },
+          where: { user_id: followersIds },
           include: [{ model: Image, as: 'Images' },
           { model: User, attributes: ['username'] }]
         });
@@ -351,7 +351,7 @@ router.get('/api/travelogs/filter', async (req, res) => {
       case 'followingsTravelogs':
         const followingsIds = await getFollowingsIds(user_id);
         travelogs = await Travelog.findAll({
-          where: { userId: followingsIds },
+          where: { user_id: followingsIds },
           include: [{ model: Image, as: 'Images' },
           { model: User, attributes: ['username'] }]
         });
@@ -368,11 +368,11 @@ router.get('/api/travelogs/filter', async (req, res) => {
 });
 
 // Custom long/lat values for UserHub map: 
-router.patch('/api/user/:userId/map_center', async (req, res) => {
+router.patch('/api/user/:user_id/map_center', async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { user_id } = req.params;
     const { map_center } = req.body;
-    const user = await User.findByPk(userId);
+    const user = await User.findByPk(user_id);
     if (user) {
       await user.update({ map_center });
       res.json({ success: true, map_center });
