@@ -166,7 +166,7 @@ router.patch('/api/travelog/:id', updateLastActive, async (req, res) => {
   try {
       const { user_id } = req.body
       const { id } = req.params;
-      const { title, site, country, state, city, address, phoneNumber, dateVisited, longitude, latitude, isPrivate, unesco, have_visited, category, textBody, tripId, film_location, video_game_location } = req.body;
+      const { title, site, country, state, city, address, phone_number, date_visited, longitude, latitude, is_private, unesco, have_visited, category, trip_id, film_location, video_game_location } = req.body;
 
       // Find the travelog by ID
       const travelog = await Travelog.findByPk(id);
@@ -183,16 +183,16 @@ router.patch('/api/travelog/:id', updateLastActive, async (req, res) => {
           state,
           city,
           address,
-          phoneNumber,
-          dateVisited,
+          phone_number,
+          date_visited,
           longitude,
           latitude,
-          isPrivate,
+          is_private,
           unesco,
           have_visited,
           category,
           textBody,
-          tripId, 
+          trip_id, 
           film_location, 
           video_game_location
       });
