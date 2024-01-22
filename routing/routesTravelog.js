@@ -190,8 +190,7 @@ router.patch('/api/travelog/:id', updateLastActive, async (req, res) => {
           is_private,
           unesco,
           have_visited,
-          category,
-          textBody,
+          category, 
           trip_id, 
           film_location, 
           video_game_location
