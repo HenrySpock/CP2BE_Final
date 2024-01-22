@@ -20,8 +20,8 @@ router.post('/api/trips', updateLastActive, async (req, res) => {
       user_id: req.body.user_id, // Make sure this matches the case used by Sequelize model
       username: req.body.username,
       title: req.body.title,
-      dateOfDeparture: req.body.dateOfDeparture || null, // Handle potentially empty date fields
-      dateOfReturn: req.body.dateOfReturn || null,
+      date_of_departure: req.body.date_of_departure || null, // Handle potentially empty date fields
+      date_of_return: req.body.date_of_return || null,
       description: req.body.description, // Renamed from textBody to description to match model
       latitude: req.body.latitude || null, // Default to null if not provided
       longitude: req.body.longitude || null, // Default to null if not provided
