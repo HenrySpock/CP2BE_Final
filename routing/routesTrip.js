@@ -114,7 +114,7 @@ router.get('/api/tripgetnotprivate/:trip_id', async (req, res) => {
     
 
     if (trip.isPrivate === false) {
-      // console.log('TRIPGET HEEEEEEEEEEEEEEEEERE userId tripId THIS SHOULD RENDER', trip_id, trip)
+      // console.log('TRIPGET HEEEEEEEEEEEEEEEEERE user_id trip_id THIS SHOULD RENDER', trip_id, trip)
       res.status(200).json(trip);
     } else {
       res.status(404).json({ message: 'Trip not found or you do not have access to this trip' });
@@ -126,12 +126,12 @@ router.get('/api/tripgetnotprivate/:trip_id', async (req, res) => {
 });
 
 // GET a single trip by trip_id and user_id
-router.get('/api/tripget/:tripId', async (req, res) => {
+router.get('/api/tripget/:trip_id', async (req, res) => {
   try {
-    const { tripId } = req.params;
+    const { trip_id } = req.params;
     const userId = req.query.userId;
 
-    const trip = await Trip.findOne({ where: { trip_id: tripId, user_id: userId } });
+    const trip = await Trip.findOne({ where: { trip_id: trip_id, user_id: userId } });
 
     if (trip) {
       res.status(200).json(trip);
@@ -148,11 +148,11 @@ router.get('/api/tripget/:tripId', async (req, res) => {
 
 
 // GET a single trip by trip_id
-router.get('/api/tripdet/:tripId', async (req, res) => {
-  const { tripId } = req.params;
+router.get('/api/tripdet/:trip_id', async (req, res) => {
+  const { trip_id } = req.params;
 
   try {
-    const trip = await Trip.findOne({ where: { trip_id: tripId } });
+    const trip = await Trip.findOne({ where: { trip_id: trip_id } });
     if (trip) {
       res.status(200).json(trip);
     } else {
@@ -191,13 +191,13 @@ router.get('/api/travelogs/:trip_id', async (req, res) => {
 
 // GET travelogs with optional trip link filter
 router.get('/api/travelogs', async (req, res) => {
-  const { userId, tripId } = req.query;
+  const { userId, trip_id } = req.query;
 
   try {
     const travelogs = await Travelog.findAll({
       where: {
         userId: userId,
-        tripId: tripId === 'null' ? null : tripId
+        trip_id: trip_id === 'null' ? null : trip_id
       },
       include: [{
         model: Image,
@@ -213,17 +213,17 @@ router.get('/api/travelogs', async (req, res) => {
 });
 
 // PATCH update trip
-router.patch('/api/trips/:tripId', updateLastActive, async (req, res) => { 
+router.patch('/api/trips/:trip_id', updateLastActive, async (req, res) => { 
   // console.log('Request Params:', req.params);
   // console.log('Request Body:', req.body);
   try {
-    const { tripId } = req.params;
+    const { trip_id } = req.params;
     const updateData = req.body;
     const user_id = req.body.user_id;
     // console.log('88888888888888888 user_id: ', user_id)
-    const [updated] = await Trip.update(updateData, { where: { trip_id: tripId, user_id } });
+    const [updated] = await Trip.update(updateData, { where: { trip_id: trip_id, user_id } });
     if (updated) {
-      const updatedTrip = await Trip.findOne({ where: { trip_id: tripId, user_id } });
+      const updatedTrip = await Trip.findOne({ where: { trip_id: trip_id, user_id } });
       return res.status(200).json(updatedTrip);
     }
     throw new Error('Trip not found');
@@ -233,17 +233,17 @@ router.patch('/api/trips/:tripId', updateLastActive, async (req, res) => {
 });
 
 // DELETE trip
-router.delete('/api/trips/:tripId', updateLastActive, async (req, res) => {
+router.delete('/api/trips/:trip_id', updateLastActive, async (req, res) => {
   try {
-    const { tripId } = req.params;
+    const { trip_id } = req.params;
     const { user_id } = req.query; 
-    const trip = await Trip.findOne({ where: { trip_id: tripId } });
+    const trip = await Trip.findOne({ where: { trip_id: trip_id } });
     if (trip) {
       // console.log('trying to delete trip.trip_id: ', trip.trip_id)
 
-      await FeedbackReport.destroy({ where: { reported_trip_id: tripId } });
+      await FeedbackReport.destroy({ where: { reported_trip_id: trip_id } });
 
-      await Travelog.update({ tripId: null }, { where: { tripId: trip.trip_id } });
+      await Travelog.update({ trip_id: null }, { where: { trip_id: trip.trip_id } });
       await trip.destroy();
       return res.status(204).send();
     }
@@ -255,9 +255,9 @@ router.delete('/api/trips/:tripId', updateLastActive, async (req, res) => {
 });
   
 // Route to patch a trip entry with trip data 
-router.patch('/update_tripentry/:tripId', updateLastActive, async (req, res) => {
+router.patch('/update_tripentry/:trip_id', updateLastActive, async (req, res) => {
   // console.log('POST tripentry HERE 1, req.body: ', req.body);
-  const { tripId } = req.params;
+  const { trip_id } = req.params;
   const { tripentry } = req.body;
   const { user_id } = req.body;
 
@@ -265,7 +265,7 @@ router.patch('/update_tripentry/:tripId', updateLastActive, async (req, res) => 
     // console.log('POST tripentry HERE 2')
     const updatedTrip = await Trip.update(
       { tripentry },
-      { where: { trip_id: tripId } }
+      { where: { trip_id: trip_id } }
     );
 
     if (updatedTrip) {
@@ -281,11 +281,11 @@ router.patch('/update_tripentry/:tripId', updateLastActive, async (req, res) => 
 });
 
 // Endpoint to get trip data
-router.get('/get_tripentry/:tripId', async (req, res) => {
-  const { tripId } = req.params;
+router.get('/get_tripentry/:trip_id', async (req, res) => {
+  const { trip_id } = req.params;
 
   try {
-    const trip = await Trip.findByPk(tripId);
+    const trip = await Trip.findByPk(trip_id);
     // console.log('TRIPENTRY: ', trip.tripentry)
     if (!trip) {
       return res.status(404).send({ error: 'Trip not found' });
@@ -343,17 +343,17 @@ router.get('/api/trips/sorting/filter', async (req, res) => {
 });
 
 // Endpoint to delete tripentry for a specific trip
-router.patch('/delete_tripentry/:tripId', updateLastActive, async (req, res) => {
-  const { tripId } = req.params;
+router.patch('/delete_tripentry/:trip_id', updateLastActive, async (req, res) => {
+  const { trip_id } = req.params;
 
   try {
     const updatedTrip = await Trip.update(
       { tripentry: null },
-      { where: { trip_id: tripId } }
+      { where: { trip_id: trip_id } }
     );
 
     if (updatedTrip[0] > 0) {
-      // console.log('Tripentry deleted successfully for tripId:', tripId);
+      // console.log('Tripentry deleted successfully for trip_id:', trip_id);
       res.status(200).json({ message: "Tripentry deleted successfully" });
     } else {
       res.status(404).json({ error: "Trip not found or no changes made" });
