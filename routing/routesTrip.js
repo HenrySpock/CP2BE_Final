@@ -113,7 +113,7 @@ router.get('/api/tripgetnotprivate/:trip_id', async (req, res) => {
     const trip = await Trip.findOne({ where: { trip_id: trip_id } });
     
 
-    if (trip.isPrivate === false) {
+    if (trip.is_private === false) {
       // console.log('TRIPGET HEEEEEEEEEEEEEEEEERE user_id trip_id THIS SHOULD RENDER', trip_id, trip)
       res.status(200).json(trip);
     } else {
