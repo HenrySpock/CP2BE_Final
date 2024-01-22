@@ -1293,6 +1293,7 @@ app.get('/api/all-conversations/:userId', async (req, res) => {
 app.delete('/api/conversations/:caller_id/:receiver_id', async (req, res) => {
   try {
       const { caller_id, receiver_id } = req.params;
+      console.log('caller_id, receiver_id', caller_id, receiver_id)
 
       // Find all messages between the two users
       const messages = await Message.findAll({
@@ -1306,13 +1307,13 @@ app.delete('/api/conversations/:caller_id/:receiver_id', async (req, res) => {
 
       for (const message of messages) {
           if (message.caller_id === parseInt(caller_id)) {
-              message.callerDel = true;
+              message.caller_del = true;
           } else {
-              message.receiverDel = true;
+              message.receiver_del = true;
           }
           await message.save();
 
-          if (message.callerDel && message.receiverDel) {
+          if (message.caller_del && message.receiver_del) {
               await message.destroy();
           }
       }
