@@ -175,8 +175,7 @@ Travelog.init({
 
   category: { type: DataTypes.STRING },
 
-  // reported: { type: Sequelize.BOOLEAN, defaultValue: false }, 
-  // tripId: { type: DataTypes.INTEGER, references: { model: Trip, key: 'trip_id' }, allowNull: true },
+  // reported: { type: Sequelize.BOOLEAN, defaultValue: false },  
   trip_id: { type: DataTypes.INTEGER, references: { model: Trip, key: 'trip_id' }, allowNull: true },
   // createdAt: { type: DataTypes.DATEONLY, defaultValue: DataTypes.NOW },
   view_count: { type: DataTypes.INTEGER, defaultValue: 0 },

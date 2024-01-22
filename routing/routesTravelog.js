@@ -368,14 +368,14 @@ router.get('/api/travelogs/filter', async (req, res) => {
 });
 
 // Custom long/lat values for UserHub map: 
-router.patch('/api/user/:userId/mapCenter', async (req, res) => {
+router.patch('/api/user/:userId/map_center', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { mapCenter } = req.body;
+    const { map_center } = req.body;
     const user = await User.findByPk(userId);
     if (user) {
-      await user.update({ mapCenter });
-      res.json({ success: true, mapCenter });
+      await user.update({ map_center });
+      res.json({ success: true, map_center });
     } else {
       res.status(404).json({ success: false, message: 'User not found' });
     }

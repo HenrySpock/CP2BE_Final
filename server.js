@@ -1063,7 +1063,7 @@ app.get('/api/comments', async (req, res) => {
     let commentsQueryConditions = [];
     let comments;  // Initialize the comments variable here
 
-    // Handle travelogId
+    // Handle travelog_id
     if (travelog_id) {
       const travelog = await Travelog.findOne({
         where: { travelog_id: travelog_id },
@@ -1076,7 +1076,7 @@ app.get('/api/comments', async (req, res) => {
       commentsQueryConditions.push({ travelog_id: travelog_id });
     }
 
-    // Handle tripId
+    // Handle trip_id
     if (trip_id) {
       const trip = await Trip.findOne({
         where: { trip_id: trip_id },
@@ -1484,9 +1484,9 @@ app.get('/api/likers/writing', async (req, res) => {
 // ROUTES FOR LIKES
 // TRIP POST
 app.post('/api/likes/trip', updateLastActive, async (req, res) => { 
-  const { user_id, liker_id, liketype, tripId } = req.body;
+  const { user_id, liker_id, liketype, trip_id } = req.body;
    
-  let condition = { user_id, liker_id, trip_id: tripId, liketype };
+  let condition = { user_id, liker_id, trip_id: trip_id, liketype };
   if (liketype === 'educational-trip') {
     condition.liketype = 'educational-trip';
   } else if (liketype === 'writing') {
@@ -1495,8 +1495,7 @@ app.post('/api/likes/trip', updateLastActive, async (req, res) => {
     condition.liketype = 'trip';
   }
 
-  const trip_id = tripId;
-  // console.log('HEEEEEEEEEEEEY tripId: ', trip_id, 'req.body: ', req.body)
+   // console.log('HEEEEEEEEEEEEY trip_id: ', trip_id, 'req.body: ', req.body)
   try {
     const existingLike = await TripLikes.findOne({
       where: { user_id, liker_id, liketype, trip_id }
@@ -1523,7 +1522,7 @@ app.post('/api/likes/trip', updateLastActive, async (req, res) => {
       res.json({ success: true, message: 'Like removed' });
     } else {
       // Like doesn't exist, create it
-      await TripLikes.create({ user_id, liker_id, liketype, trip_id: tripId });
+      await TripLikes.create({ user_id, liker_id, liketype, trip_id });
 
       // Send a notification
       const liker = await User.findByPk(liker_id); 
@@ -1547,7 +1546,7 @@ app.post('/api/likes/trip', updateLastActive, async (req, res) => {
           text: notificationContent,
           // url: `/public_profile/${liker.username}`
           likerUrl: `/public_profile/${liker.username}`,
-          entityUrl: `/trip_det/${tripId}`
+          entityUrl: `/trip_det/${trip_id}`
         }),
         expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
       });
@@ -2188,13 +2187,13 @@ app.patch('/permissions/update', async (req, res) => {
     const updates = req.body; // Expecting an array of updates
 
     for (const update of updates) {
-      const { granterId, granteeId, tripId, travelogId, action } = update;
+      const { granterId, granteeId, trip_id, travelog_id, action } = update;
 
       // Convert IDs to integers
       const granterIdInt = parseInt(granterId);
       const granteeIdInt = parseInt(granteeId);
-      const tripIdInt = tripId ? parseInt(tripId) : null;
-      const travelogIdInt = travelogId ? parseInt(travelogId) : null;
+      const tripIdInt = trip_id ? parseInt(trip_id) : null;
+      const travelogIdInt = travelog_id ? parseInt(travelog_id) : null;
 
         if (action === 'grant') {
         // Add permission
@@ -2207,9 +2206,9 @@ app.patch('/permissions/update', async (req, res) => {
         // Fetch additional details for notification
         const granter = await User.findByPk(granterId);
         const granterUsername = granter.username
-        const entityType = tripId ? 'trip' : 'travelog';
-        const entityId = tripId ? tripId : travelogId;
-        const entityUrl = tripId ? `http://localhost:3000/trip_det/${tripId}` : `http://localhost:3000/trav_det/${travelogId}`;
+        const entityType = trip_id ? 'trip' : 'travelog';
+        const entityId = trip_id ? trip_id : travelog_id;
+        const entityUrl = trip_id ? `http://localhost:3000/trip_det/${trip_id}` : `http://localhost:3000/trav_det/${travelog_id}`;
         // console.log('HEEEEEEEEEEEEY granter', granter.dataValues.username)
         // Create notification
         const notification = await Notification.create({

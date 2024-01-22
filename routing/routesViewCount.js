@@ -55,7 +55,7 @@ router.patch('/api/travelog/increment-view-count/:travelogId', async (req, res) 
 // View Count for trip
 router.patch('/api/trip/increment-view-count/:trip_id', async (req, res) => { 
   
-  // console.log("Endpoint hit with tripId:", req.params.trip_id);
+  // console.log("Endpoint hit with trip_id:", req.params.trip_id);
   try {
     const { trip_id } = req.params;
     
