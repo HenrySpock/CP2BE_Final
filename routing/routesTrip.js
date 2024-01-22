@@ -43,10 +43,10 @@ router.post('/api/trips', updateLastActive, async (req, res) => {
  
 
 router.get('/api/trips', async (req, res) => {
-  // console.log('Received GET request on /api/trips with user ID:', req.query.userId);
+  // console.log('Received GET request on /api/trips with user ID:', req.query.user_id);
   
   try {
-    const currentUserId = parseInt(req.query.userId);
+    const currentUserId = parseInt(req.query.user_id);
 
     if (!currentUserId) {
       console.error('User ID parameter missing');
@@ -86,12 +86,12 @@ router.get('/api/trips', async (req, res) => {
 });
 
 // GET user-specific trips for mapping with the first image of the earliest travelog 
-router.get('/api/trips/:userId', async (req, res) => {
-  const { userId } = req.params;
+router.get('/api/trips/:user_id', async (req, res) => {
+  const { user_id } = req.params;
   
   try {
     const userTrips = await Trip.findAll({
-      where: { user_id: userId },
+      where: { user_id: user_id },
       attributes: ['trip_id', 'title', 'date_of_departure', 'date_of_return', 'latitude', 'longitude', 'image_url', 'username', 'is_private', 'have_visited'], 
     });
     // console.log('userTrips: ', userTrips);
@@ -129,9 +129,9 @@ router.get('/api/tripgetnotprivate/:trip_id', async (req, res) => {
 router.get('/api/tripget/:trip_id', async (req, res) => {
   try {
     const { trip_id } = req.params;
-    const userId = req.query.userId;
+    const user_id = req.query.user_id;
 
-    const trip = await Trip.findOne({ where: { trip_id: trip_id, user_id: userId } });
+    const trip = await Trip.findOne({ where: { trip_id: trip_id, user_id: user_id } });
 
     if (trip) {
       res.status(200).json(trip);
@@ -191,12 +191,12 @@ router.get('/api/travelogs/:trip_id', async (req, res) => {
 
 // GET travelogs with optional trip link filter
 router.get('/api/travelogs', async (req, res) => {
-  const { userId, trip_id } = req.query;
+  const { user_id, trip_id } = req.query;
 
   try {
     const travelogs = await Travelog.findAll({
       where: {
-        userId: userId,
+        user_id: user_id,
         trip_id: trip_id === 'null' ? null : trip_id
       },
       include: [{
@@ -299,33 +299,33 @@ router.get('/get_tripentry/:trip_id', async (req, res) => {
 
 router.get('/api/trips/sorting/filter', async (req, res) => {
   try {
-    const { filterType, userId } = req.query;
+    const { filterType, user_id } = req.query;
 
     let trips = [];
     
     switch (filterType) {
       case 'yourTrips':
         trips = await Trip.findAll({
-          where: { user_id: userId },
+          where: { user_id: user_id },
           include: [{ model: User, as: 'User', attributes: ['username'] }]
         });
         break;
       case 'friendsTrips': 
-        const friendsIds = await getFriendsIds(userId);
+        const friendsIds = await getFriendsIds(user_id);
         trips = await Trip.findAll({
           where: { user_id: { [Op.in]: friendsIds } },
           include: [{ model: User, as: 'User', attributes: ['username'] }]
         });
         break;
       case 'followersTrips':
-        const followersIds = await getFollowersIds(userId);
+        const followersIds = await getFollowersIds(user_id);
         trips = await Trip.findAll({
           where: { user_id: followersIds },
           include: [{ model: User, as: 'User', attributes: ['username'] }]
         });
         break;
       case 'followingsTrips':
-        const followingsIds = await getFollowingsIds(userId);
+        const followingsIds = await getFollowingsIds(user_id);
         trips = await Trip.findAll({
           where: { user_id: followingsIds },
           include: [{ model: User, as: 'User', attributes: ['username'] }]
