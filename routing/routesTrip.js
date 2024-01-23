@@ -28,7 +28,7 @@ router.post('/api/trips', updateLastActive, async (req, res) => {
       trip_zoom: req.body.trip_zoom,
       tripCenter: req.body.tripCenter,
       image_url: req.body.image_url, // Can be empty string if not provided
-      isPrivate: req.body.is_private, // Can be empty string if not provided
+      is_private: req.body.is_private, // Can be empty string if not provided
       have_visited: req.body.have_visited, // Can be empty string if not provided
     };
     

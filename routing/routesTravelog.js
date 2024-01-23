@@ -71,8 +71,7 @@ router.get('/api/travelog-entries', async (req, res) => {
     let limit = currentUserId ? null : 5; // Limit for non-logged-in users
 
     // Initialize where condition
-    let whereCondition = {
-      // isPrivate: false
+    let whereCondition = { 
       is_private: false
     };
 

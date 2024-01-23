@@ -163,8 +163,7 @@ Travelog.init({
   // dateVisited: { type: DataTypes.DATE, allowNull: true },
   // dateVisited: { type: DataTypes.DATEONLY, allowNull: true },
   date_visited: { type: DataTypes.DATE, allowNull: true },
-  
-  // isPrivate: { type: DataTypes.BOOLEAN, defaultValue: false },
+   
   is_private: { type: DataTypes.BOOLEAN, defaultValue: false },
   have_visited: { type: DataTypes.BOOLEAN, defaultValue: false },
   unesco: { type: DataTypes.BOOLEAN, defaultValue: false },
