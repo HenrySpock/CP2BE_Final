@@ -170,20 +170,8 @@ router.delete('/api/user/:user_id', async (req, res) => {
         ] 
       }
     }); 
-    await Travelog.destroy({ 
-      where: { 
-        [Op.or]: [
-          { reported_user_id: user_id }, 
-        ] 
-      }
-    }); 
-    await Trip.destroy({ 
-      where: { 
-        [Op.or]: [
-          { reported_user_id: user_id }, 
-        ] 
-      }
-    });  
+    await Travelog.destroy({ where: { user_id: user_id } });
+    await Trip.destroy({ where: { user_id: user_id } });
     await Message.destroy({ where: { caller_id: user_id } });
     await Message.destroy({ where: { receiver_id: user_id } });
     
