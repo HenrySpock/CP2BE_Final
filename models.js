@@ -141,8 +141,7 @@ Trip.init({
 }, { sequelize, modelName: 'Trip', tableName: 'trips' });
 
 class Travelog extends Model {}
-Travelog.init({
-  // travelogId: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
+Travelog.init({ 
   travelog_id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   user_id: { type: DataTypes.INTEGER, references: { model: User, key: 'user_id' } },
 

@@ -13,7 +13,7 @@ const router = express.Router();
 router.get('/api/users/newest', async (req, res) => {
   try {
     const newestUser = await User.findOne({
-      // attributes: { exclude: ['createdAt', 'updatedAt'] },
+      // attributes: { exclude: ['created_at', 'updated_at'] },
       order: [['created_at', 'DESC']]
     });
 
@@ -29,7 +29,7 @@ router.get('/api/users/newest', async (req, res) => {
 router.get('/api/trips/newest', async (req, res) => {
   try {
     const newestTrip = await Trip.findOne({
-      // attributes: { exclude: ['createdAt', 'updatedAt'] },
+      // attributes: { exclude: ['created_at', 'updated_at'] },
       include: [{ model: User, as: 'User', attributes: ['user_id', 'username', 'created_at']  }],
       order: [['created_at', 'DESC']]
     });
@@ -45,7 +45,7 @@ router.get('/api/trips/newest', async (req, res) => {
 router.get('/api/travelogs/newest', async (req, res) => {
   try {
     const newestTravelog = await Travelog.findOne({
-      // attributes: { exclude: ['createdAt', 'updatedAt'] },
+      // attributes: { exclude: ['created_at', 'updated_at'] },
       include: [
         { model: User, as: 'User', attributes: ['user_id', 'username', 'created_at'] }, 
         { model: Image, as: 'Images', attributes: ['image_id', 'travelog_id', 'image_url', 'view_count', 'title', 'description', 'created_at', 'updated_at']  }

@@ -30,14 +30,14 @@ router.patch('/api/public_profile/increment-view-count/:username', async (req, r
 });
 
 // View Count for travelog
-router.patch('/api/travelog/increment-view-count/:travelogId', async (req, res) => { 
+router.patch('/api/travelog/increment-view-count/:travelog_id', async (req, res) => { 
 
-  // console.log("Endpoint hit with travelogId:", req.params.travelogId);
+  // console.log("Endpoint hit with travelog_id:", req.params.travelog_id);
   try {
-    const { travelogId } = req.params;
+    const { travelog_id } = req.params;
     
     // Find the user by username and increment the view count
-    const travelog = await Travelog.findOne({ where: { travelog_id: travelogId } });
+    const travelog = await Travelog.findOne({ where: { travelog_id: travelog_id } });
     if (!travelog) {
       return res.status(404).send('Travelog not found');
     }

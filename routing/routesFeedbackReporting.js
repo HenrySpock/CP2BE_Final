@@ -95,7 +95,7 @@ router.post('/api/users/:username/report', async (req, res) => {
 });
  
 
-router.post('/api/trip/:tripId/report', async (req, res) => {
+router.post('/api/trip/:trip_id/report', async (req, res) => {
   
   try {
     // console.log('YO')
@@ -125,7 +125,7 @@ router.post('/api/trip/:tripId/report', async (req, res) => {
 });
  
 
-router.post('/api/travelog/:travelogId/report', async (req, res) => {
+router.post('/api/travelog/:travelog_id/report', async (req, res) => {
   try {
     const username = req.params.username;
     const { user_id, complaint_text, reported_travelog_id, username: reporterUsername, email: reporterEmail } = req.body;

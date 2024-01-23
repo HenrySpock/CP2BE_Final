@@ -25,7 +25,7 @@ router.post('/api/trips', updateLastActive, async (req, res) => {
       description: req.body.description, // Renamed from textBody to description to match model
       latitude: req.body.latitude || null, // Default to null if not provided
       longitude: req.body.longitude || null, // Default to null if not provided
-      tripZoom: req.body.tripZoom,
+      trip_zoom: req.body.trip_zoom,
       tripCenter: req.body.tripCenter,
       image_url: req.body.image_url, // Can be empty string if not provided
       isPrivate: req.body.is_private, // Can be empty string if not provided

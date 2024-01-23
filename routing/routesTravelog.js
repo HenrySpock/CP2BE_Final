@@ -282,12 +282,12 @@ router.post('/api/travelog/:id/delete-images', updateLastActive, async (req, res
 
 
 // Route to Delete Travelog
-router.delete('/api/travelog/:travelogId', updateLastActive, async (req, res) => {
+router.delete('/api/travelog/:travelog_id', updateLastActive, async (req, res) => {
   try {
     const user_id = req.query.user_id;
     // console.log('user_id: ', user_id);
-    const travelogId = req.params.travelogId; 
-    const travelog = await Travelog.findByPk(travelogId);
+    const travelog_id = req.params.travelog_id; 
+    const travelog = await Travelog.findByPk(travelog_id);
     if (travelog) {
       await travelog.destroy();  // This will also delete associated images if you have set up cascading deletes
       res.status(200).send({ message: 'Travelog deleted successfully' });
@@ -405,16 +405,16 @@ router.get('/api/users/:authorId/block-status/:currentUserId', async (req, res) 
  
 // TIP TAP TEST
 // Route to patch a travelog entry with traventry data 
-router.patch('/update_traventry/:travelogId', updateLastActive, async (req, res) => {
+router.patch('/update_traventry/:travelog_id', updateLastActive, async (req, res) => {
   // console.log('Received content for traventry update:', req.body.traventry);
-  const { travelogId } = req.params;
+  const { travelog_id } = req.params;
   const { traventry } = req.body;
 
   try {
     // console.log('POST traventry HERE 2')
     const updatedTravelog = await Travelog.update(
       { traventry },
-      { where: { travelog_id: travelogId } }
+      { where: { travelog_id: travelog_id } }
     );
 
     if (updatedTravelog) {
@@ -430,11 +430,11 @@ router.patch('/update_traventry/:travelogId', updateLastActive, async (req, res)
 });
 
 // Endpoint to get traventry data
-router.get('/get_traventry/:travelogId', async (req, res) => {
-  const { travelogId } = req.params;
+router.get('/get_traventry/:travelog_id', async (req, res) => {
+  const { travelog_id } = req.params;
 
   try {
-    const travelog = await Travelog.findByPk(travelogId);
+    const travelog = await Travelog.findByPk(travelog_id);
     // console.log('TRAVENTRY: ', travelog.traventry)
     if (!travelog) {
       return res.status(404).send({ error: 'Travelog not found' });
@@ -470,17 +470,17 @@ router.get('/api/tip_tap_contents/all', async (req, res) => {
 });
 
 // Endpoint to delete traventry for a specific travelog
-router.patch('/delete_traventry/:travelogId', async (req, res) => {
-  const { travelogId } = req.params;
+router.patch('/delete_traventry/:travelog_id', async (req, res) => {
+  const { travelog_id } = req.params;
 
   try {
     const updatedTravelog = await Travelog.update(
       { traventry: null },
-      { where: { travelog_id: travelogId } }
+      { where: { travelog_id: travelog_id } }
     );
 
     if (updatedTravelog[0] > 0) {
-      // console.log('Traventry deleted successfully for travelogId:', travelogId);
+      // console.log('Traventry deleted successfully for travelog_id:', travelog_id);
       res.status(200).json({ message: "Traventry deleted successfully" });
     } else {
       res.status(404).json({ error: "Travelog not found or no changes made" });
