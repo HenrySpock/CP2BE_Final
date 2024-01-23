@@ -8,7 +8,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');  
 const axios = require('axios');
 // const { User, Image, Travelog, Comment, Notification, Message, FeedbackReport, Rating, ForbiddenWord, Friendship, Follow, Block, Indicator } = require('../models');
-const { User, Message, FeedbackReport, Indicator } = require('../models');
+const { User, Message, FeedbackReport, Indicator, Trip, Travelog } = require('../models');
 const { Op } = require('sequelize');
 const updateLastActive = require('../middleware/updateLastActive');
 
@@ -158,8 +158,10 @@ router.patch('/api/user/:user_id', async (req, res) => {
 // Deleting a User, their travelogs and images. 
 router.delete('/api/user/:user_id', async (req, res) => {
   // console.log('req.params: ', req.params)
+  const { user_id } = req.params;
   try {
-    const user_id = req.params.user_id;
+    // const user_id = req.params.user_id;
+    const transaction = await sequelize.transaction();
 
     await FeedbackReport.destroy({ 
       where: { 
@@ -167,7 +169,21 @@ router.delete('/api/user/:user_id', async (req, res) => {
           { reported_user_id: user_id }, 
         ] 
       }
-    });
+    }); 
+    await Travelog.destroy({ 
+      where: { 
+        [Op.or]: [
+          { reported_user_id: user_id }, 
+        ] 
+      }
+    }); 
+    await Trip.destroy({ 
+      where: { 
+        [Op.or]: [
+          { reported_user_id: user_id }, 
+        ] 
+      }
+    });  
     await Message.destroy({ where: { caller_id: user_id } });
     await Message.destroy({ where: { receiver_id: user_id } });
     
