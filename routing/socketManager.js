@@ -12,17 +12,17 @@ function initializeSocket(server) {
 
   io.on('connection', (socket) => {
     // console.log('New client connected'); 
-    const userId = socket.handshake.query.userId;
-    // console.log('socket.handshake.query.userId: ', userId);
-    if (userId) {
-      socket.join(userId);
+    const user_id = socket.handshake.query.user_id;
+    // console.log('socket.handshake.query.user_id: ', user_id);
+    if (user_id) {
+      socket.join(user_id);
       // console.log('Rooms:', io.sockets.adapter.rooms);
     }
 
     socket.on('disconnect', () => {
       // console.log('Client disconnected');
-      if (userId) {
-        socket.leave(userId);
+      if (user_id) {
+        socket.leave(user_id);
       }
     });
   });

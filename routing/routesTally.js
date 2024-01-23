@@ -32,12 +32,12 @@ const transporter = nodemailer.createTransport({
 // 01 Fetch unread user notifications 
 router.get('/unread-user-notifications', async (req, res) => {
   try {
-    // console.log('HERE, user id: ', req.query.userId)
-    const userId = req.query.userId; // Assuming you have user information in req.user
-    // console.log('userId: ', userId)
+    // console.log('HERE, user id: ', req.query.user_id)
+    const user_id = req.query.user_id; // Assuming you have user information in req.user
+    // console.log('user_id: ', user_id)
     const count = await Notification.count({
       where: {
-        recipient_id: userId,
+        recipient_id: user_id,
         read: false
       }
     });
@@ -49,13 +49,13 @@ router.get('/unread-user-notifications', async (req, res) => {
 });
  
 // 02 Mark Notifications as read 
-router.patch('/mark-notifications-read/:userId', async (req, res) => {
+router.patch('/mark-notifications-read/:user_id', async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const user_id = req.params.user_id;
 
     await Notification.update(
       { read: true },
-      { where: { recipient_id: userId, read: false } }
+      { where: { recipient_id: user_id, read: false } }
     );
 
     res.status(200).send('Notifications marked as read');
@@ -69,7 +69,7 @@ router.patch('/mark-notifications-read/:userId', async (req, res) => {
 // 03 Fetch unread user messages 
 router.get('/unread-user-messages', async (req, res) => {
   try {
-    const userId = req.query.userId;
+    const user_id = req.query.user_id;
     const isAdmin = req.query.isAdmin === 'true';
 
     if (isAdmin) {
@@ -77,7 +77,7 @@ router.get('/unread-user-messages', async (req, res) => {
       const warnedUserIdsResult = await Message.findAll({
         attributes: ['receiver_id'],
         where: {
-          caller_id: userId,
+          caller_id: user_id,
           warning: true
         },
         group: ['receiver_id']
@@ -88,7 +88,7 @@ router.get('/unread-user-messages', async (req, res) => {
       // Count messages where the admin is the receiver and the sender is not in the warned list
       const count = await Message.count({
         where: {
-          receiver_id: userId,
+          receiver_id: user_id,
           read: false,
           caller_id: { [Op.notIn]: warnedUserIds } // Exclude messages from warned users
         }
@@ -99,7 +99,7 @@ router.get('/unread-user-messages', async (req, res) => {
       // For regular users, count all unread messages
       const count = await Message.count({
         where: {
-          receiver_id: userId,
+          receiver_id: user_id,
           read: false
         }
       });
@@ -115,10 +115,10 @@ router.get('/unread-user-messages', async (req, res) => {
 // 04 Fetch unread Admin user messages 
 router.get('/unread-user-messages', async (req, res) => {
   try {
-    const userId = req.query.userId;
+    const user_id = req.query.user_id;
     const count = await Message.count({
       where: {
-        receiver_id: userId,
+        receiver_id: user_id,
         read: false
       }
     });
@@ -132,11 +132,11 @@ router.get('/unread-user-messages', async (req, res) => {
 // 05 Fetch unread messages between Admin and user: 
 router.get('/unread-admin-messages', async (req, res) => {
   try {
-    const userId = req.query.userId;
+    const user_id = req.query.user_id;
 
     // This query counts conversations with unread messages  
     const conversations = await Message.findAll({
-      where: { receiver_id: userId, read: false },
+      where: { receiver_id: user_id, read: false },
       include: [{
         model: User,
         as: 'Sender',
@@ -150,7 +150,7 @@ router.get('/unread-admin-messages', async (req, res) => {
       const hasWarning = await Message.findOne({
         where: {
           [Op.or]: [
-            { caller_id: userId, receiver_id: convo.caller_id, warning: true }, 
+            { caller_id: user_id, receiver_id: convo.caller_id, warning: true }, 
           ]
         }
       });
@@ -170,7 +170,7 @@ router.get('/unread-admin-messages', async (req, res) => {
 // 06 Mark messages received in a given conversation as read 
 router.patch('/mark-messages-as-read', async (req, res) => {
   try {
-    const { userId, conversationId } = req.body;
+    const { user_id, conversationId } = req.body;
 
     // Update the 'read' status of messages in the conversation
     await Message.update(
@@ -178,7 +178,7 @@ router.patch('/mark-messages-as-read', async (req, res) => {
       {
         where: { 
           [Op.or]: [ 
-            { caller_id: conversationId, receiver_id: userId }
+            { caller_id: conversationId, receiver_id: user_id }
           ],
           read: false // Only update messages that are currently unread
         }

@@ -49,7 +49,7 @@ router.get('/user', async (req, res) => {
 
   try {
     const decodedToken = jwt.verify(actualToken, jwtSecret); 
-    const user = await User.findOne({ where: { user_id: decodedToken.userId } });
+    const user = await User.findOne({ where: { user_id: decodedToken.user_id } });
     if (!user) {
       return res.status(404).send('User not found');
     }
@@ -89,11 +89,11 @@ router.get('/api/users/:username', (req, res) => {
 });
 
 // Fetching Profile For Editing User Details
-router.get('/api/user/:userId', async (req, res) => {
+router.get('/api/user/:user_id', async (req, res) => {
   // console.log('WE ARE HERE ***********************')
   try {
-    const userId = req.params.userId;
-    const user = await User.findByPk(userId);
+    const user_id = req.params.user_id;
+    const user = await User.findByPk(user_id);
     res.status(200).send(user);
   } catch (error) {
     console.error('Error fetching user details:', error);
@@ -102,13 +102,13 @@ router.get('/api/user/:userId', async (req, res) => {
 });
 
 // Update a user's details from edit profile 
-router.patch('/api/user/:userId', async (req, res) => {
+router.patch('/api/user/:user_id', async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const user_id = req.params.user_id;
     const updateFields = req.body;
     const isAdminKey = updateFields.adminKey;
 
-    // console.log(`Received update request for user_id: ${userId} with fields:`, updateFields); 
+    // console.log(`Received update request for user_id: ${user_id} with fields:`, updateFields); 
  
     if (typeof req.body.answer !== 'undefined' && req.body.answer !== null && req.body.answer.trim() !== '') {
       // console.log('req.body.answer: ', req.body.answer)
@@ -118,14 +118,14 @@ router.patch('/api/user/:userId', async (req, res) => {
       updateFields.answer = hashedAnswer;
     }
 
-    const user = await User.findByPk(userId);
+    const user = await User.findByPk(user_id);
     if (!user) {
-      // console.log(`User not found for user_id: ${userId}`);
+      // console.log(`User not found for user_id: ${user_id}`);
       return res.status(404).send('User not found');
     }
 
     const previousData = user.get({ plain: true });
-    // console.log(`Previous data for user_id: ${userId}:`, previousData);
+    // console.log(`Previous data for user_id: ${user_id}:`, previousData);
 
     // Check if an admin key is provided and matches the expected admin key
     if (isAdminKey && isAdminKey === process.env.ADMIN_KEY) {
@@ -141,7 +141,7 @@ router.patch('/api/user/:userId', async (req, res) => {
     // Update the user with the provided fields, including the isAdmin value
     const updateResult = await user.update(updateFields);
 
-    // console.log(`Update result for user_id: ${userId}:`, updateResult.get({ plain: true }));
+    // console.log(`Update result for user_id: ${user_id}:`, updateResult.get({ plain: true }));
 
     res.json({
       success: true,
@@ -156,22 +156,22 @@ router.patch('/api/user/:userId', async (req, res) => {
 
 
 // Deleting a User, their travelogs and images. 
-router.delete('/api/user/:userId', async (req, res) => {
+router.delete('/api/user/:user_id', async (req, res) => {
   // console.log('req.params: ', req.params)
   try {
-    const userId = req.params.userId;
+    const user_id = req.params.user_id;
 
     await FeedbackReport.destroy({ 
       where: { 
         [Op.or]: [
-          { reported_user_id: userId }, 
+          { reported_user_id: user_id }, 
         ] 
       }
     });
-    await Message.destroy({ where: { caller_id: userId } });
-    await Message.destroy({ where: { receiver_id: userId } });
+    await Message.destroy({ where: { caller_id: user_id } });
+    await Message.destroy({ where: { receiver_id: user_id } });
     
-    await User.destroy({ where: { user_id: userId } });
+    await User.destroy({ where: { user_id: user_id } });
     res.status(200).send({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('Error deleting user:', error);
@@ -180,11 +180,11 @@ router.delete('/api/user/:userId', async (req, res) => {
 });
 
 // Changing a password
-router.patch('/api/user/:userId/password', async (req, res) => {
+router.patch('/api/user/:user_id/password', async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const user_id = req.params.user_id;
     const { oldPassword, newPassword } = req.body;
-    const user = await User.findByPk(userId);
+    const user = await User.findByPk(user_id);
     
     if (!user) {
       return res.status(404).send('User not found');

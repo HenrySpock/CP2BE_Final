@@ -267,13 +267,13 @@ app.get('/api/friends/status/:user1/:user2', async (req, res) => {
 });
 
 // Get all notifications for a specific user
-app.get('/api/notifications/:userId', async (req, res) => {
-  // console.log('Received GET request on /api/notifications/' + req.params.userId);
-  const { userId } = req.params;
+app.get('/api/notifications/:user_id', async (req, res) => {
+  // console.log('Received GET request on /api/notifications/' + req.params.user_id);
+  const { user_id } = req.params;
   try {
     const notifications = await Notification.findAll({
       where: {
-        recipient_id: userId,  // Updated column name
+        recipient_id: user_id,  // Updated column name
         dismissed: false,  // Updated column name
       },
       include: [
@@ -684,11 +684,11 @@ app.post('/api/block', async (req, res) => {
 
 // MESSAGE COUNTS AND FRIEND/ADMIN CARD POPULATION ON MESSAGES.JS 
 // Helper function to get the count of unread messages
-async function getUnreadMessagesCount(userId, friendId) {
+async function getUnreadMessagesCount(user_id, friendId) {
   try {
     const count = await Message.count({
       where: {
-        receiver_id: userId, // Current user must be the receiver
+        receiver_id: user_id, // Current user must be the receiver
         caller_id: friendId, // Friend is the sender
         read: false         // Message is not read
       }
@@ -701,15 +701,15 @@ async function getUnreadMessagesCount(userId, friendId) {
 } 
 
 // Retrieve friends list and message count
-app.get('/api/friends/:userId', async (req, res) => {
-  const userId = parseInt(req.params.userId, 10);
+app.get('/api/friends/:user_id', async (req, res) => {
+  const user_id = parseInt(req.params.user_id, 10);
 
   try {
     const friendsRelations = await Friendship.findAll({
       where: {
         [Op.or]: [
-          { user1: userId },
-          { user2: userId }
+          { user1: user_id },
+          { user2: user_id }
         ],
         accepted: true
       },
@@ -721,9 +721,9 @@ app.get('/api/friends/:userId', async (req, res) => {
 
     // Transform data to get a list of friend user objects with unread message count
     const friendsListWithUnreadCount = await Promise.all(friendsRelations.map(async relation => {
-      let friend = relation.Requester.user_id !== userId ? relation.Requester : relation.Requestee;
+      let friend = relation.Requester.user_id !== user_id ? relation.Requester : relation.Requestee;
       friend = friend.get({ plain: true }); // Convert Sequelize model instance to plain object
-      const unreadCount = await getUnreadMessagesCount(userId, friend.user_id);
+      const unreadCount = await getUnreadMessagesCount(user_id, friend.user_id);
       return { ...friend, unreadCount }; // Append unread message count to friend data
     }));
     
@@ -735,11 +735,11 @@ app.get('/api/friends/:userId', async (req, res) => {
 }); 
 
 // Helper function to get the count of unread admin messages
-async function getUnreadAdminMessagesCount(userId) {
+async function getUnreadAdminMessagesCount(user_id) {
   try {
     const count = await Message.count({
       where: {
-        receiver_id: userId, // Current user must be the receiver
+        receiver_id: user_id, // Current user must be the receiver
         warning: true,       // Message is a warning (admin message)
         read: false          // Message is not read
       },
@@ -757,11 +757,11 @@ async function getUnreadAdminMessagesCount(userId) {
 } 
 
 // Helper function to check 'cleared' status for populating admin card/messages properly:
-async function areAllReportsCleared(userId) {
+async function areAllReportsCleared(user_id) {
   // Check reports directly reported on the user
   const directReports = await FeedbackReport.count({
     where: {
-      reported_user_id: userId,
+      reported_user_id: user_id,
       cleared: false
     }
   });
@@ -773,9 +773,9 @@ async function areAllReportsCleared(userId) {
     where: {
       cleared: false,
       [Op.or]: [
-        { '$ReportedTrip.user_id$': userId },
-        { '$ReportedTravelog.user_id$': userId },
-        { '$ReportedComment.user_id$': userId }
+        { '$ReportedTrip.user_id$': user_id },
+        { '$ReportedTravelog.user_id$': user_id },
+        { '$ReportedComment.user_id$': user_id }
       ]
     },
     include: [
@@ -788,27 +788,27 @@ async function areAllReportsCleared(userId) {
   return associatedReports === 0;
 }
 
-app.get('/api/admin-messages/:userId', async (req, res) => {
-  const userId = parseInt(req.params.userId, 10);
+app.get('/api/admin-messages/:user_id', async (req, res) => {
+  const user_id = parseInt(req.params.user_id, 10);
 
   try {
-    const unreadCount = await getUnreadAdminMessagesCount(userId);
+    const unreadCount = await getUnreadAdminMessagesCount(user_id);
 
     // ADDED 
     // Calculate the count of read admin messages
     const readCount = await Message.count({
-      where: { receiver_id: userId, warning: true, read: true }
+      where: { receiver_id: user_id, warning: true, read: true }
     });
 
     let adminUser = null;
 
-    const allReportsCleared = await areAllReportsCleared(userId);
+    const allReportsCleared = await areAllReportsCleared(user_id);
     // console.log('ALLREPORTSCLEARED: ', allReportsCleared)
 
     // if (unreadCount > 0 && !allReportsCleared) {
     if ((unreadCount > 0 || readCount > 0) && !allReportsCleared) {
       const adminMessage = await Message.findOne({
-        where: { receiver_id: userId, warning: true, read: false },
+        where: { receiver_id: user_id, warning: true, read: false },
         include: {
           model: User,
           as: 'Sender',
@@ -822,7 +822,7 @@ app.get('/api/admin-messages/:userId', async (req, res) => {
 
     if (unreadCount === 0 && readCount > 0) {
       adminMessage = await Message.findOne({
-        where: { receiver_id: userId, warning: true, read: true },
+        where: { receiver_id: user_id, warning: true, read: true },
         include: {
           model: User,
           as: 'Sender',
@@ -844,13 +844,13 @@ app.get('/api/admin-messages/:userId', async (req, res) => {
 }); 
 
 // Retrieve followers list:
-app.get('/api/followers/:userId', async (req, res) => {
-  const userId = parseInt(req.params.userId, 10);
+app.get('/api/followers/:user_id', async (req, res) => {
+  const user_id = parseInt(req.params.user_id, 10);
 
   try {
     const followersRelations = await Follow.findAll({
       where: {
-        followee_id: userId
+        followee_id: user_id
       },
       include: [
         { model: User, as: 'Follower', attributes: ['user_id', 'username', 'avatar'] }
@@ -870,13 +870,13 @@ app.get('/api/followers/:userId', async (req, res) => {
 });
 
 // Retrieve followings list:
-app.get('/api/followings/:userId', async (req, res) => {
-  const userId = parseInt(req.params.userId, 10);
+app.get('/api/followings/:user_id', async (req, res) => {
+  const user_id = parseInt(req.params.user_id, 10);
 
   try {
     const followingsRelations = await Follow.findAll({
       where: {
-        follower_id: userId
+        follower_id: user_id
       },
       include: [
         { model: User, as: 'Followee', attributes: ['user_id', 'username', 'avatar'] }
@@ -896,12 +896,12 @@ app.get('/api/followings/:userId', async (req, res) => {
 });
 
 // Disconnections - get all denied / non-dismissed users:  
-app.get('/api/user/:userId/denied-requests', async (req, res) => {
-  const { userId } = req.params;
+app.get('/api/user/:user_id/denied-requests', async (req, res) => {
+  const { user_id } = req.params;
   try {
     const deniedRequests = await Friendship.findAll({
       where: {
-        [Op.or]: [{ user1: userId }, { user2: userId }],
+        [Op.or]: [{ user1: user_id }, { user2: user_id }],
         denied: true,
         dismissed: false  // Exclude dismissed requests
       },
@@ -915,14 +915,14 @@ app.get('/api/user/:userId/denied-requests', async (req, res) => {
 }); 
 
 // Disconnections - get all blocked users:  
-app.get('/api/user/:userId/blocked-users', async (req, res) => {
-  const { userId } = req.params;
+app.get('/api/user/:user_id/blocked-users', async (req, res) => {
+  const { user_id } = req.params;
   try {
     const blockedUsers = await User.findAll({
       include: {
         model: Block,
         as: 'blocksReceived',  
-        where: { blocker_id: userId },
+        where: { blocker_id: user_id },
       },
     });
     res.json(blockedUsers);
@@ -1262,21 +1262,21 @@ app.get('/api/conversations/:caller_id/:receiver_id', async (req, res) => {
   }
 }); 
 
-app.get('/api/all-conversations/:userId', async (req, res) => {
+app.get('/api/all-conversations/:user_id', async (req, res) => {
   // console.log('NOW HERE*********************')
   try {
-    const { userId } = req.params;
+    const { user_id } = req.params;
 
     // This is a hypothetical way to get all conversations. 
     const conversations = await Message.findAll({
       where: {
-        [Op.or]: [{ caller_id: userId }, { receiver_id: userId }]
+        [Op.or]: [{ caller_id: user_id }, { receiver_id: user_id }]
       },
       include: [{ 
         model: User,
         as: 'Friend',
         where: {
-          user_id: { [Op.ne]: userId }
+          user_id: { [Op.ne]: user_id }
         },
         attributes: ['username']  
       }],
@@ -1328,16 +1328,16 @@ app.delete('/api/conversations/:caller_id/:receiver_id', async (req, res) => {
 // POST /api/notify-user: feedback route with notification / io emit:
 app.post('/api/notify-user', async (req, res) => {
   try {
-    const { userId } = req.body;
+    const { user_id } = req.body;
 
-    if (!userId) {
+    if (!user_id) {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
     // Create a new notification in the database
     const notification = await Notification.create({
       // sender_id: /* Admin's user ID or an identifier */,
-      recipient_id: userId,
+      recipient_id: user_id,
       type: 'Account Warning',  
       content: JSON.stringify({
         text: 'Your account is under review. Further action may be taken in 72 hours.',
@@ -1347,7 +1347,7 @@ app.post('/api/notify-user', async (req, res) => {
     });
 
     // Emit the notification to the user in real-time  
-    io.to(userId.toString()).emit('new-notification', notification);
+    io.to(user_id.toString()).emit('new-notification', notification);
 
     return res.status(200).json({ message: 'Notification sent successfully', notification });
   } catch (error) {
@@ -2061,13 +2061,13 @@ app.get('/api/likers/image', async (req, res) => {
 });
 
 // Permissions routes 
-app.get('/api/permissions/check/:userId', async (req, res) => {
-  const userId = req.params.userId;
+app.get('/api/permissions/check/:user_id', async (req, res) => {
+  const user_id = req.params.user_id;
 
   try {
       // Check for any trip or travelog permissions for the user
-      const tripPermission = await Permission.findOne({ where: { grantee_id: userId, trip_id: { [Op.ne]: null } } });
-      const travelogPermission = await Permission.findOne({ where: { grantee_id: userId, travelog_id: { [Op.ne]: null } } });
+      const tripPermission = await Permission.findOne({ where: { grantee_id: user_id, trip_id: { [Op.ne]: null } } });
+      const travelogPermission = await Permission.findOne({ where: { grantee_id: user_id, travelog_id: { [Op.ne]: null } } });
 
       const hasPermissions = !!tripPermission || !!travelogPermission;
       res.json({ hasPermissions });
@@ -2078,13 +2078,13 @@ app.get('/api/permissions/check/:userId', async (req, res) => {
 });
 
 // Fetching permissions for travelog rendering on Private_Logs 
-app.get('/permissions/travelogs/:userId', async (req, res) => {
-  const userId = req.params.userId;
+app.get('/permissions/travelogs/:user_id', async (req, res) => {
+  const user_id = req.params.user_id;
 
   try {
       const privateTravelogs = await Permission.findAll({
           where: {
-              grantee_id: userId,
+              grantee_id: user_id,
               travelog_id: { [Op.ne]: null }
           },
           include: [{
@@ -2115,13 +2115,13 @@ app.get('/permissions/travelogs/:userId', async (req, res) => {
 
 
 // Fetching permissions for trip rendering on Private_Logs 
-app.get('/permissions/trips/:userId', async (req, res) => {
-  const userId = req.params.userId;
+app.get('/permissions/trips/:user_id', async (req, res) => {
+  const user_id = req.params.user_id;
 
   try {
       const privateTrips = await Permission.findAll({
           where: {
-              grantee_id: userId,
+              grantee_id: user_id,
               trip_id: { [Op.ne]: null }
           },
           include: [{
@@ -2154,18 +2154,18 @@ async function checkPermission(entityType, entityId, granteeId) {
 }
 // Permissions check for trips and travelogs
 // Updated endpoint to check specific permission for entityId and entityType
-app.get('/api/permissions/specific/:userId', async (req, res) => {
+app.get('/api/permissions/specific/:user_id', async (req, res) => {
   try {
     const { entityId, entityType } = req.query;
-    const userId = parseInt(req.params.userId);
+    const user_id = parseInt(req.params.user_id);
 
     let hasAccess = false;
     let permissionCondition = {};
 
     if (entityType === 'travelog') {
-      permissionCondition = { grantee_id: userId, travelog_id: parseInt(entityId) };
+      permissionCondition = { grantee_id: user_id, travelog_id: parseInt(entityId) };
     } else if (entityType === 'trip') {
-      permissionCondition = { grantee_id: userId, trip_id: parseInt(entityId) };
+      permissionCondition = { grantee_id: user_id, trip_id: parseInt(entityId) };
     } else {
       return res.status(400).send('Invalid entity type');
     }
