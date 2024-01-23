@@ -1127,9 +1127,9 @@ app.get('/api/comments', async (req, res) => {
       order: [['created_at', 'ASC']]
     });
 
-    const organizeComments = (parentId = null, depth = 0) => {
+    const organizeComments = (parent_id = null, depth = 0) => {
       return comments
-        .filter(comment => comment.parent_id === parentId)
+        .filter(comment => comment.parent_id === parent_id)
         .map(comment => {
           return {
             ...comment.get(),
@@ -2251,7 +2251,7 @@ app.patch('/permissions/update', async (req, res) => {
 // MAINTENANCE MODE
 // Schedule maintenance  
 app.post('/api/schedule_maintenance', async (req, res) => {
-  const { startDate, endDate, maintenanceKey, adminId } = req.body;
+  const { startDate, endDate, maintenance_key, adminId } = req.body;
   // console.log('req.boyd for maintenance post: ', req.body)
 
   // Verify if the user is an admin
@@ -2266,7 +2266,7 @@ app.post('/api/schedule_maintenance', async (req, res) => {
       admin_id: adminId,
       timestamp_start: startDate, // map startDate to timestamp_start
       timestamp_end: endDate,     // map endDate to timestamp_end 
-      maintenance_key: maintenanceKey // map maintenanceKey to maintenance_key
+      maintenance_key: maintenance_key // map maintenance_key to maintenance_key
     });
 
     res.status(200).json({ message: 'Maintenance scheduled successfully', newMaintenance });
