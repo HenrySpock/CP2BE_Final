@@ -226,19 +226,19 @@ router.get('/api/reported-feedback', async (req, res) => {
 
 
 // Clear Report
-router.patch('/api/clear-report/:reportId/clear', async (req, res) => {
+router.patch('/api/clear-report/:report_id/clear', async (req, res) => {
   try {
-    const reportId = req.params.reportId;
+    const report_id = req.params.report_id;
     const adminUserId = req.body.adminUserId;
 
-    // Update the 'cleared' variable to true for the specified reportId
+    // Update the 'cleared' variable to true for the specified report_id
     await FeedbackReport.update({ cleared: true }, {
-      where: { report_id: reportId }
+      where: { report_id: report_id }
     });
 
     // Find the report details
     const report = await FeedbackReport.findOne({
-      where: { report_id: reportId },
+      where: { report_id: report_id },
       include: [
         { model: Trip, as: 'ReportedTrip', attributes: ['user_id'] },
         { model: Travelog, as: 'ReportedTravelog', attributes: ['user_id'] },
