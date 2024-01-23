@@ -54,7 +54,7 @@ router.post('/api/travelog', updateLastActive, async (req, res) => {
       await Image.bulkCreate(imagesData);   
     }
     // console.log("Attempting to save text_body:", req.body.textBody);
-    // console.log("Attempting to save date_visited:", req.body.dateVisited);
+    // console.log("Attempting to save date_visited:", req.body.date_visited);
     res.json({ message: 'Travelog and Images saved successfully', travelog_id: newTravelog.travelog_id, newTravelog });
 
   } catch (error) {
@@ -149,7 +149,7 @@ router.get('/api/travelog/:id', async (req, res) => {
       ]
     });
     if (travelog) {
-      // console.log('Date Visited:', travelog.dateVisited);
+      // console.log('Date Visited:', travelog.date_visited);
       res.json(travelog);
     } else {
       res.status(404).send('Travelog not found');

@@ -13,7 +13,7 @@ cron.schedule('20 5 * * *', async () => {
       { denied: true },
       {
         where: {
-          createdAt: {
+          created_at: {
             // [Op.lt]: thirtySecondsAgo  
             [Op.lt]: oneMonthAgo 
           },
@@ -37,7 +37,7 @@ cron.schedule('0 5 * * *', async () => {
     // Delete suspensions older than three days
     await Suspension.destroy({
       where: {
-        createdAt: {
+        created_at: {
           [Op.lt]: threeDaysAgo,
         },
       },

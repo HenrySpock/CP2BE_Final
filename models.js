@@ -160,8 +160,8 @@ Travelog.init({
   traventry: { type: DataTypes.JSONB, allowNull: true },
 
 
-  // dateVisited: { type: DataTypes.DATE, allowNull: true },
-  // dateVisited: { type: DataTypes.DATEONLY, allowNull: true },
+  // date_visited: { type: DataTypes.DATE, allowNull: true },
+  // date_visited: { type: DataTypes.DATEONLY, allowNull: true },
   date_visited: { type: DataTypes.DATE, allowNull: true },
    
   is_private: { type: DataTypes.BOOLEAN, defaultValue: false },
@@ -174,8 +174,7 @@ Travelog.init({
   category: { type: DataTypes.STRING },
 
   // reported: { type: Sequelize.BOOLEAN, defaultValue: false },  
-  trip_id: { type: DataTypes.INTEGER, references: { model: Trip, key: 'trip_id' }, allowNull: true },
-  // createdAt: { type: DataTypes.DATEONLY, defaultValue: DataTypes.NOW },
+  trip_id: { type: DataTypes.INTEGER, references: { model: Trip, key: 'trip_id' }, allowNull: true }, 
   view_count: { type: DataTypes.INTEGER, defaultValue: 0 },
   created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, field: 'created_at' },
   updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, field: 'updated_at' }
@@ -256,12 +255,7 @@ Follow.init({
   updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, field: 'updated_at' }
 }, { sequelize, modelName: 'Follow', tableName: 'follows' });
 
-
-// const Block = sequelize.define('block', {
-//   blockId: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
-//   blocker_id: {    type: Sequelize.INTEGER,    allowNull: false  },
-//   blocked_id: {    type: Sequelize.INTEGER,    allowNull: false  }
-// });
+ 
 
 class Block extends Model {}
 Block.init({

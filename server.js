@@ -124,7 +124,7 @@ app.post('/api/friends/request', async (req, res) => {
         username: requesterUsername,
         url: `/public_profile/${requesterUsername}`
     }),
-    expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+    expiry_date: new Date(new Date().setMonth(new Date().getMonth() + 1))
   });
 
   // console.log('Attempting to notify requestee: ', requestee); 
@@ -484,7 +484,7 @@ app.post('/api/friends/request/undenied', async (req, res) => {
         text: 'has accepted your friend request.',
         url: `/public_profile/${recipientUsername}`
       }), 
-      expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+      expiry_date: new Date(new Date().setMonth(new Date().getMonth() + 1))
     }, { transaction: t });
 
     // console.log('Emitting notification to sender_id:', sender_id);
@@ -540,7 +540,7 @@ app.post('/api/follow', async (req, res) => {
           text: 'has followed you.',
           url: `/public_profile/${followerUsername}`
         }), 
-        expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+        expiry_date: new Date(new Date().setMonth(new Date().getMonth() + 1))
       });
 
       // console.log('Notification created:', notification);
@@ -933,10 +933,10 @@ app.get('/api/user/:user_id/blocked-users', async (req, res) => {
 });
 
 // Unblock a user  
-app.delete('/api/block/:blockId', async (req, res) => {
-  const { blockId } = req.params;
+app.delete('/api/block/:block_id', async (req, res) => {
+  const { block_id } = req.params;
   try {
-    const block = await Block.findOne({ where: { blockId } });
+    const block = await Block.findOne({ where: { block_id } });
     if (!block) {
       return res.status(404).send('Block not found');
     }
@@ -1035,7 +1035,7 @@ app.post('/api/comment', updateLastActive, async (req, res) => {
         text: 'commented on your travelog/trip.',
         url: redirectUrl
       }),
-      expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+      expiry_date: new Date(new Date().setMonth(new Date().getMonth() + 1))
     });
 
     res.json({ success: true, comment });
@@ -1342,8 +1342,8 @@ app.post('/api/notify-user', async (req, res) => {
       content: JSON.stringify({
         text: 'Your account is under review. Further action may be taken in 72 hours.',
       }),
-      expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
-      // expiryDate: /* Set an expiry date if needed */,
+      expiry_date: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+      // expiry_date: /* Set an expiry date if needed */,
     });
 
     // Emit the notification to the user in real-time  
@@ -1405,7 +1405,7 @@ app.post('/api/likes/profile', updateLastActive, async (req, res) => {
           likerUrl: `/public_profile/${liker.username}`,
           entityUrl: `/public_profile/${profileOwner.username}`
         }),
-        expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+        expiry_date: new Date(new Date().setMonth(new Date().getMonth() + 1))
       });
 
       // Emit notification using socket.io
@@ -1548,7 +1548,7 @@ app.post('/api/likes/trip', updateLastActive, async (req, res) => {
           likerUrl: `/public_profile/${liker.username}`,
           entityUrl: `/trip_det/${trip_id}`
         }),
-        expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+        expiry_date: new Date(new Date().setMonth(new Date().getMonth() + 1))
       });
  
       // Emit notification using socket.io
@@ -1716,7 +1716,7 @@ app.post('/api/likes/travelog', updateLastActive, async (req, res) => {
           likerUrl: `/public_profile/${liker.username}`,
           entityUrl: `/trav_det/${travelog_id}`
         }),
-        expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+        expiry_date: new Date(new Date().setMonth(new Date().getMonth() + 1))
       });
  
       // Emit notification using socket.io
@@ -1912,7 +1912,7 @@ app.post('/api/likes/comment', updateLastActive, async (req, res) => {
           likerUrl: `/public_profile/${liker.username}`,
           entityUrl: entityUrl
         }),
-        expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+        expiry_date: new Date(new Date().setMonth(new Date().getMonth() + 1))
       });
  
       // Emit notification using socket.io
@@ -2012,7 +2012,7 @@ app.post('/api/likes/image', updateLastActive, async (req, res) => {
           likerUrl: `/public_profile/${liker.username}`,
           entityUrl: entityUrl
         }),
-        expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+        expiry_date: new Date(new Date().setMonth(new Date().getMonth() + 1))
       });
 
       // Emit notification
@@ -2221,7 +2221,7 @@ app.patch('/permissions/update', async (req, res) => {
             entityUrl: entityUrl,
             url: `/public_profile/${granterUsername}`
           }),
-          expiryDate: new Date(new Date().setMonth(new Date().getMonth() + 1))
+          expiry_date: new Date(new Date().setMonth(new Date().getMonth() + 1))
         }); 
 
         
@@ -2251,11 +2251,11 @@ app.patch('/permissions/update', async (req, res) => {
 // MAINTENANCE MODE
 // Schedule maintenance  
 app.post('/api/schedule_maintenance', async (req, res) => {
-  const { startDate, endDate, maintenance_key, adminId } = req.body;
+  const { startDate, endDate, maintenance_key, admin_id } = req.body;
   // console.log('req.boyd for maintenance post: ', req.body)
 
   // Verify if the user is an admin
-  const adminUser = await User.findByPk(adminId);
+  const adminUser = await User.findByPk(admin_id);
   if (!adminUser || !adminUser.isAdmin) {
     return res.status(403).json({ message: 'Unauthorized: Only admins can schedule maintenance.' });
   }
@@ -2263,7 +2263,7 @@ app.post('/api/schedule_maintenance', async (req, res) => {
   // Insert data into the maintenance_schedule table
   try {
     const newMaintenance = await Maintenance.create({
-      admin_id: adminId,
+      admin_id: admin_id,
       timestamp_start: startDate, // map startDate to timestamp_start
       timestamp_end: endDate,     // map endDate to timestamp_end 
       maintenance_key: maintenance_key // map maintenance_key to maintenance_key

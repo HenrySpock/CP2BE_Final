@@ -337,8 +337,8 @@ router.get('/api/check-suspension', async (req, res) => {
 
     // console.log(`Suspension record: ${JSON.stringify(suspension)}`); // Log the suspension record found
 
-    if (suspension && suspension.createdAt) {
-      const suspensionTime = new Date(suspension.createdAt);
+    if (suspension && suspension.created_at) {
+      const suspensionTime = new Date(suspension.created_at);
       const currentTime = new Date();
       // console.log(`Suspension time: ${suspensionTime}, Current time: ${currentTime}`); // Log the times
 
