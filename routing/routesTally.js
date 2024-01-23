@@ -70,9 +70,9 @@ router.patch('/mark-notifications-read/:user_id', async (req, res) => {
 router.get('/unread-user-messages', async (req, res) => {
   try {
     const user_id = req.query.user_id;
-    const isAdmin = req.query.isAdmin === 'true';
+    const is_admin = req.query.is_admin === 'true';
 
-    if (isAdmin) {
+    if (is_admin) {
       // Fetch all user IDs who received a warning from this admin
       const warnedUserIdsResult = await Message.findAll({
         attributes: ['receiver_id'],
@@ -113,21 +113,21 @@ router.get('/unread-user-messages', async (req, res) => {
 });
 
 // 04 Fetch unread Admin user messages 
-router.get('/unread-user-messages', async (req, res) => {
-  try {
-    const user_id = req.query.user_id;
-    const count = await Message.count({
-      where: {
-        receiver_id: user_id,
-        read: false
-      }
-    });
-    res.json({ unreadCount: count });
-  } catch (error) {
-    console.error('Error fetching unread user messages:', error);
-    res.status(500).send('Internal server error');
-  }
-});
+// router.get('/unread-user-messages', async (req, res) => {
+//   try {
+//     const user_id = req.query.user_id;
+//     const count = await Message.count({
+//       where: {
+//         receiver_id: user_id,
+//         read: false
+//       }
+//     });
+//     res.json({ unreadCount: count });
+//   } catch (error) {
+//     console.error('Error fetching unread user messages:', error);
+//     res.status(500).send('Internal server error');
+//   }
+// });
 
 // 05 Fetch unread messages between Admin and user: 
 router.get('/unread-admin-messages', async (req, res) => {

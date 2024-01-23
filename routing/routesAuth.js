@@ -139,7 +139,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).send('Invalid credentials');
     }
 
-    const token = jwt.sign({ userId: user.user_id, is_admin: user.is_admin }, jwtSecret); 
+    const token = jwt.sign({ user_id: user.user_id, is_admin: user.is_admin }, jwtSecret); 
     res.send({ token, user });
   } catch (error) {
     console.error(error);
