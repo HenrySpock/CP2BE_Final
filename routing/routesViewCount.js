@@ -19,7 +19,7 @@ router.patch('/api/public_profile/increment-view-count/:username', async (req, r
       return res.status(404).send('User not found');
     }
 
-    user.viewCount += 1; // Increment the view count
+    user.view_count += 1; // Increment the view count
     await user.save(); // Save the updated user
 
     res.send('View count updated');
@@ -42,7 +42,7 @@ router.patch('/api/travelog/increment-view-count/:travelogId', async (req, res) 
       return res.status(404).send('Travelog not found');
     }
 
-    travelog.viewCount += 1; // Increment the view count
+    travelog.view_count += 1; // Increment the view count
     await travelog.save(); // Save the updated user
 
     res.send('View count updated');
@@ -65,7 +65,7 @@ router.patch('/api/trip/increment-view-count/:trip_id', async (req, res) => {
       return res.status(404).send('Trip not found');
     }
 
-    trip.viewCount += 1; // Increment the view count
+    trip.view_count += 1; // Increment the view count
     await trip.save(); // Save the updated user
 
     res.send('View count updated');
@@ -89,7 +89,7 @@ router.patch('/api/image/increment-view-count/:image_id', async (req, res) => {
       return res.status(404).send('Image not found');
     }
     
-    image.viewCount += 1; // Increment the view count
+    image.view_count += 1; // Increment the view count
     await image.save(); // Save the updated image
     // console.log("View count incremented for image_id:", image_id);
 
