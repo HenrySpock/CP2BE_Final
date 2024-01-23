@@ -248,8 +248,7 @@ Notification.init({
 }, { sequelize, modelName: 'Notification', tableName: 'notifications' });
 
 class Follow extends Model {}
-Follow.init({
-  // followId: { type: DataTypes.UUID, defaultValue: Sequelize.UUIDV4, primaryKey: true },
+Follow.init({ 
   follow_id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   follower_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } },
   followee_id: { type: DataTypes.INTEGER, allowNull: false, references: { model: User, key: 'user_id' } },

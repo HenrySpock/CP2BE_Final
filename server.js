@@ -504,12 +504,12 @@ app.post('/api/friends/request/undenied', async (req, res) => {
 
 // Dismiss a denied friend request 
 app.post('/api/friends/request/dismiss', async (req, res) => {
-  const { friendshipId } = req.body;
+  const { friendship_id } = req.body;
   try {
     // Update the 'dismissed' field for the specified friendship
     await Friendship.update(
       { dismissed: true },
-      { where: { friendshipId: friendshipId } }
+      { where: { friendship_id: friendship_id } }
     );
     res.json({ success: true });
   } catch (error) {
@@ -2142,12 +2142,12 @@ app.get('/permissions/trips/:user_id', async (req, res) => {
 
 // --------------------------------------------------
 // Function to check permission in the database
-async function checkPermission(entityType, entityId, granteeId) {
+async function checkPermission(entityType, entityId, grantee_id) {
   const condition = entityType === 'travelog' ? { travelog_id: entityId } : { trip_id: entityId };
   const permission = await Permission.findOne({
     where: {
       ...condition,
-      grantee_id: granteeId
+      grantee_id: grantee_id
     }
   });
   return !!permission;
@@ -2187,11 +2187,11 @@ app.patch('/permissions/update', async (req, res) => {
     const updates = req.body; // Expecting an array of updates
 
     for (const update of updates) {
-      const { granterId, granteeId, trip_id, travelog_id, action } = update;
+      const { granter_id, grantee_id, trip_id, travelog_id, action } = update;
 
       // Convert IDs to integers
-      const granterIdInt = parseInt(granterId);
-      const granteeIdInt = parseInt(granteeId);
+      const granterIdInt = parseInt(granter_id);
+      const granteeIdInt = parseInt(grantee_id);
       const tripIdInt = trip_id ? parseInt(trip_id) : null;
       const travelogIdInt = travelog_id ? parseInt(travelog_id) : null;
 
@@ -2204,7 +2204,7 @@ app.patch('/permissions/update', async (req, res) => {
           travelog_id: travelogIdInt
         });
         // Fetch additional details for notification
-        const granter = await User.findByPk(granterId);
+        const granter = await User.findByPk(granter_id);
         const granterUsername = granter.username
         const entityType = trip_id ? 'trip' : 'travelog';
         const entityId = trip_id ? trip_id : travelog_id;
@@ -2212,8 +2212,8 @@ app.patch('/permissions/update', async (req, res) => {
         // console.log('HEEEEEEEEEEEEY granter', granter.dataValues.username)
         // Create notification
         const notification = await Notification.create({
-          sender_id: granterId,
-          recipient_id: granteeId,
+          sender_id: granter_id,
+          recipient_id: grantee_id,
           type: `${entityType}-access-granted`,
           content: JSON.stringify({
             text: ` has given you access to their ${entityType}.`,
@@ -2226,7 +2226,7 @@ app.patch('/permissions/update', async (req, res) => {
 
         
         // Emit notification
-        io.to(granteeId.toString()).emit('new-notification', notification);
+        io.to(grantee_id.toString()).emit('new-notification', notification);
       }  else if (action === 'revoke') {
         // Revoke permission
         const condition = tripIdInt ? { trip_id: tripIdInt } : { travelog_id: travelogIdInt };
