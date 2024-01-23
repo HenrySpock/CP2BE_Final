@@ -285,16 +285,16 @@ router.patch('/api/clear-report/:reportId/clear', async (req, res) => {
  
 // Suspend a user: POST /api/suspend
 router.post('/api/suspend', async (req, res) => {
-  const { userEmail, action } = req.body;
+  const { user_email, action } = req.body;
 
   try {
     if (action === 'suspend') {
       // Create a new suspension record
-      await Suspension.create({ userEmail });
+      await Suspension.create({ user_email });
       res.status(200).json({ success: true, message: 'User suspended successfully' });
     } else if (action === 'unsuspend') {
       // Remove the suspension record
-      await Suspension.destroy({ where: { userEmail } });
+      await Suspension.destroy({ where: { user_email } });
       res.status(200).json({ success: true, message: 'User unsuspended successfully' });
     } else {
       res.status(400).json({ success: false, message: 'Invalid action' });
@@ -328,11 +328,11 @@ router.get('/api/get-user-email', async (req, res) => {
 // GET /api/check-suspension
 router.get('/api/check-suspension', async (req, res) => {
   try {
-    const { userEmail } = req.query;
-    // console.log(`Checking suspension for email: ${userEmail}`); // Log the email being checked
+    const { user_email } = req.query;
+    // console.log(`Checking suspension for email: ${user_email}`); // Log the email being checked
 
     const suspension = await Suspension.findOne({
-      where: { user_email: userEmail }
+      where: { user_email: user_email }
     });
 
     // console.log(`Suspension record: ${JSON.stringify(suspension)}`); // Log the suspension record found
