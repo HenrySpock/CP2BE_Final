@@ -812,7 +812,7 @@ app.get('/api/admin-messages/:user_id', async (req, res) => {
         include: {
           model: User,
           as: 'Sender',
-          where: { isAdmin: true },
+          where: { is_admin: true },
           attributes: ['user_id', 'username', 'avatar']
         }
       });
@@ -826,7 +826,7 @@ app.get('/api/admin-messages/:user_id', async (req, res) => {
         include: {
           model: User,
           as: 'Sender',
-          where: { isAdmin: true },
+          where: { is_admin: true },
           attributes: ['user_id', 'username', 'avatar']
         }
       });
@@ -2256,7 +2256,7 @@ app.post('/api/schedule_maintenance', async (req, res) => {
 
   // Verify if the user is an admin
   const adminUser = await User.findByPk(admin_id);
-  if (!adminUser || !adminUser.isAdmin) {
+  if (!adminUser || !adminUser.is_admin) {
     return res.status(403).json({ message: 'Unauthorized: Only admins can schedule maintenance.' });
   }
 
