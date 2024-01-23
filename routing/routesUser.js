@@ -8,7 +8,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');  
 const axios = require('axios');
 // const { User, Image, Travelog, Comment, Notification, Message, FeedbackReport, Rating, ForbiddenWord, Friendship, Follow, Block, Indicator } = require('../models');
-const { User, Message, FeedbackReport, Indicator, Trip, Travelog } = require('../models');
+const { User, Message, FeedbackReport, Indicator, Trip, Travelog, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const updateLastActive = require('../middleware/updateLastActive');
 
