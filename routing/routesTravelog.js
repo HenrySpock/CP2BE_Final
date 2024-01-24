@@ -8,7 +8,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');  
 const axios = require('axios');
 // const { User, Image, Travelog, Comment, Notification, Message, FeedbackReport, Rating, ForbiddenWord, Friendship, Follow, Block, Trip, TipTapContent, Indicator, sequelize } = require('../models');
-const { User, Image, Travelog, Block, Trip, TipTapContent, sequelize } = require('../models');
+const { User, Image, Travelog, Block, Trip, TipTapContent, FeedbackReport, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const updateLastActive = require('../middleware/updateLastActive');
 const { getFriendsIds, getFollowersIds, getFollowingsIds } = require('../helperFunctions/helperFunctions');
@@ -283,12 +283,17 @@ router.post('/api/travelog/:id/delete-images', updateLastActive, async (req, res
 // Route to Delete Travelog
 router.delete('/api/travelog/:travelog_id', updateLastActive, async (req, res) => {
   try {
-    const user_id = req.query.user_id;
+    // const user_id = req.query.user_id;
     // console.log('user_id: ', user_id);
     const travelog_id = req.params.travelog_id; 
+
+    await FeedbackReport.destroy({
+      where: { reported_travelog_id: travelog_id }
+    });
+
     const travelog = await Travelog.findByPk(travelog_id);
     if (travelog) {
-      await travelog.destroy();  // This will also delete associated images if you have set up cascading deletes
+      await travelog.destroy();  // This will also delete associated images
       res.status(200).send({ message: 'Travelog deleted successfully' });
     } else {
       res.status(404).send({ message: 'Travelog not found' });
