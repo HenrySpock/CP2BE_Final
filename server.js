@@ -2227,8 +2227,8 @@ app.patch('/permissions/update', async (req, res) => {
         const granter = await User.findByPk(granter_id);
         const granterUsername = granter.username
         const entityType = trip_id ? 'trip' : 'travelog';
-        // const entityId = trip_id ? trip_id : travelog_id;
-        const entityUrl = trip_id ? `/trip_det/${trip_id}` : `/trav_det/${travelog_id}`;
+        const entityId = trip_id ? trip_id : travelog_id;
+        const entityUrl = trip_id ? `/trip_det/${entityId}` : `/trav_det/${entityId}`;
         // console.log('HEEEEEEEEEEEEY granter', granter.dataValues.username)
         // Create notification
         const notification = await Notification.create({
