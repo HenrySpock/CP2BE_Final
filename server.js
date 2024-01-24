@@ -2208,7 +2208,7 @@ app.patch('/permissions/update', async (req, res) => {
 
     for (const update of updates) {
       const { granter_id, grantee_id, trip_id, travelog_id, action } = update;
-
+      console.log('trip_id, travelog_id: ', trip_id, travelog_id)
       // Convert IDs to integers
       const granterIdInt = parseInt(granter_id);
       const granteeIdInt = parseInt(grantee_id);
@@ -2228,6 +2228,7 @@ app.patch('/permissions/update', async (req, res) => {
         const granterUsername = granter.username
         const entityType = trip_id ? 'trip' : 'travelog';
         const entityId = trip_id ? trip_id : travelog_id;
+        console.log('entityId: ', entityId)
         const entityUrl = trip_id ? `/trip_det/${entityId}` : `/trav_det/${entityId}`;
         // console.log('HEEEEEEEEEEEEY granter', granter.dataValues.username)
         // Create notification
