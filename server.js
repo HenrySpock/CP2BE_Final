@@ -1197,6 +1197,10 @@ app.delete('/api/comments/:comment_id', updateLastActive, async (req, res) => {
     if (!comment) {
       return res.status(404).json({ success: false, error: 'Comment not found' });
     }
+
+    // Delete any feedback reports associated with this comment
+    await FeedbackReport.destroy({ where: { reported_comment_id: comment_id } });
+    
     // Destroy the comment
     await comment.destroy();
     res.json({ success: true });
