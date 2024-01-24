@@ -2162,21 +2162,24 @@ app.get('/permissions/trips/:user_id', async (req, res) => {
 
 // --------------------------------------------------
 // Function to check permission in the database
-async function checkPermission(entityType, entityId, grantee_id) {
-  const condition = entityType === 'travelog' ? { travelog_id: entityId } : { trip_id: entityId };
-  const permission = await Permission.findOne({
-    where: {
-      ...condition,
-      grantee_id: grantee_id
-    }
-  });
-  return !!permission;
-}
+// async function checkPermission(entityType, entityId, grantee_id) {
+//   const condition = entityType === 'travelog' ? { travelog_id: entityId } : { trip_id: entityId };
+//   const permission = await Permission.findOne({
+//     where: {
+//       ...condition,
+//       grantee_id: grantee_id
+//     }
+//   });
+//   return !!permission;
+// }
+
 // Permissions check for trips and travelogs
 // Updated endpoint to check specific permission for entityId and entityType
 app.get('/api/permissions/specific/:user_id', async (req, res) => {
+  console.log('on /api/permissions/specific/:user_id')
   try {
     const { entityId, entityType } = req.query;
+    console.log('entityId, entityType: ', entityId, entityType)
     const user_id = parseInt(req.params.user_id);
 
     let hasAccess = false;
@@ -2184,8 +2187,10 @@ app.get('/api/permissions/specific/:user_id', async (req, res) => {
 
     if (entityType === 'travelog') {
       permissionCondition = { grantee_id: user_id, travelog_id: parseInt(entityId) };
+      console.log('permissionCondition: ', permissionCondition)
     } else if (entityType === 'trip') {
       permissionCondition = { grantee_id: user_id, trip_id: parseInt(entityId) };
+      console.log('permissionCondition: ', permissionCondition)
     } else {
       return res.status(400).send('Invalid entity type');
     }
@@ -2199,6 +2204,7 @@ app.get('/api/permissions/specific/:user_id', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+
 
 // --------------------------------------------------
 
