@@ -104,26 +104,57 @@ router.get('/api/trips/:user_id', async (req, res) => {
 });
 
 // GET a single trip by trip_id
-router.get('/api/tripgetnotprivate/:trip_id', async (req, res) => {
+// router.get('/api/tripgetnotprivate/:trip_id', async (req, res) => {
   
-  try {
-    const { trip_id } = req.params; 
+//   try {
+//     const { trip_id } = req.params; 
     
-    // Find the trip where trip_id and user_id match
-    const trip = await Trip.findOne({ where: { trip_id: trip_id } });
+//     // Find the trip where trip_id and user_id match
+//     const trip = await Trip.findOne({ where: { trip_id: trip_id } });
     
 
+//     if (trip.is_private === false) {
+//       // console.log('TRIPGET HEEEEEEEEEEEEEEEEERE user_id trip_id THIS SHOULD RENDER', trip_id, trip)
+//       res.status(200).json(trip);
+//     } else {
+//       res.status(404).json({ message: 'Trip not found or you do not have access to this trip' });
+//     }
+//   } catch (error) {
+//     console.error('Error fetching trip:', error);
+//     res.status(500).send('Server error');
+//   }
+// });
+
+router.get('/api/tripgetnotprivate/:trip_id', async (req, res) => {
+  try {
+    const { trip_id } = req.params;
+    const user_id = req.query.user_id;  // Get user_id from query parameters
+
+    const trip = await Trip.findOne({ where: { trip_id: trip_id } });
+
     if (trip.is_private === false) {
-      // console.log('TRIPGET HEEEEEEEEEEEEEEEEERE user_id trip_id THIS SHOULD RENDER', trip_id, trip)
       res.status(200).json(trip);
     } else {
-      res.status(404).json({ message: 'Trip not found or you do not have access to this trip' });
+      // Check if the user has permission to access this private trip
+      const permission = await Permission.findOne({
+        where: {
+          trip_id: trip_id,
+          grantee_id: user_id
+        }
+      });
+
+      if (permission) {
+        res.status(200).json(trip);  // User has permission
+      } else {
+        res.status(404).json({ message: 'Trip not found or you do not have access to this trip' });
+      }
     }
   } catch (error) {
     console.error('Error fetching trip:', error);
     res.status(500).send('Server error');
   }
 });
+
 
 // GET a single trip by trip_id and user_id
 router.get('/api/tripget/:trip_id', async (req, res) => {
