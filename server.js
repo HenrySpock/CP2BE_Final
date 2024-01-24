@@ -291,7 +291,7 @@ app.get('/api/notifications/:user_id', async (req, res) => {
  
 // Deny a friend request 
 app.post('/api/friends/request/deny', async (req, res) => {
-  const { sender_id, recipient_id, notificationId } = req.body;
+  const { sender_id, recipient_id, notification_id } = req.body;
 
   try {
     // Start a transaction to ensure both updates are successful
@@ -305,7 +305,7 @@ app.post('/api/friends/request/deny', async (req, res) => {
       // Update the notification status
       await Notification.update(
         { dismissed: true },
-        { where: { notification_id: notificationId }, transaction: t }
+        { where: { notification_id: notification_id }, transaction: t }
       );
     });
 
