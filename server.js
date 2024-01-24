@@ -1025,6 +1025,16 @@ app.post('/api/comment', updateLastActive, async (req, res) => {
       username,
     });
   
+    // Create the notification
+    let entityUrl;
+    if (travelog_id) {
+        // If the comment is on a travelog, set the entityUrl for travelog
+        entityUrl = `/trav_det/${travelog_id}`;
+    } else if (trip_id) {
+        // If the comment is on a trip, set the entityUrl for trip
+        entityUrl = `/trip_det/${trip_id}`;
+    }
+
     // Create the notification, using the travelog/trip author's user ID as the recipient_id
     const notification = await Notification.create({
       sender_id: user_id,
@@ -1033,7 +1043,8 @@ app.post('/api/comment', updateLastActive, async (req, res) => {
       content: JSON.stringify({
         username: user.username,
         text: 'commented on your travelog/trip.',
-        url: redirectUrl
+        url: redirectUrl,
+        entityUrl: entityUrl
       }),
       expiry_date: new Date(new Date().setMonth(new Date().getMonth() + 1))
     });
@@ -1200,7 +1211,7 @@ app.delete('/api/comments/:comment_id', updateLastActive, async (req, res) => {
 
     // Delete any feedback reports associated with this comment
     await FeedbackReport.destroy({ where: { reported_comment_id: comment_id } });
-    
+
     // Destroy the comment
     await comment.destroy();
     res.json({ success: true });
@@ -1536,7 +1547,7 @@ app.post('/api/likes/trip', updateLastActive, async (req, res) => {
           notificationContent = ` has liked your trip as educational.`;
           break;
         case 'writing':
-          notificationContent = ` has liked your writing.`;
+          notificationContent = ` has liked your trip log.`;
           break;
         default:
           notificationContent = ` has liked your trip.`;
@@ -1734,6 +1745,11 @@ app.post('/api/likes/travelog', updateLastActive, async (req, res) => {
   }
 });
  
+
+ 
+
+
+
 // TRAV GET 
 app.get('/api/likes/travelog/check', async (req, res) => {
   const { user_id, liker_id, travelog_id } = req.query;
