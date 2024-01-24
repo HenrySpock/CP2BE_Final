@@ -156,32 +156,92 @@ router.patch('/api/user/:user_id', async (req, res) => {
 
 
 // Deleting a User, their travelogs and images. 
+// router.delete('/api/user/:user_id', async (req, res) => {
+//   // console.log('req.params: ', req.params)
+//   const { user_id } = req.params;
+//   try {
+//     // const user_id = req.params.user_id;
+//     const transaction = await sequelize.transaction();
+
+//     await FeedbackReport.destroy({ 
+//       where: { 
+//         [Op.or]: [
+//           { reported_user_id: user_id }, 
+//         ] 
+//       }
+//     }); 
+//     await Travelog.destroy({ where: { user_id: user_id } });
+//     await Trip.destroy({ where: { user_id: user_id } });
+//     await Message.destroy({ where: { caller_id: user_id } });
+//     await Message.destroy({ where: { receiver_id: user_id } });
+    
+//     await User.destroy({ where: { user_id: user_id } });
+//     res.status(200).send({ message: 'User deleted successfully' });
+//   } catch (error) {
+//     console.error('Error deleting user:', error);
+//     res.status(500).send({ message: 'Server error' });
+//   }
+// });
+
 router.delete('/api/user/:user_id', async (req, res) => {
-  // console.log('req.params: ', req.params)
   const { user_id } = req.params;
   try {
-    // const user_id = req.params.user_id;
+    // Start a transaction 
     const transaction = await sequelize.transaction();
 
+    // Delete feedback reports directly associated with the user
     await FeedbackReport.destroy({ 
+      where: { reported_user_id: user_id },
+      transaction: transaction 
+    });
+
+    // Delete feedback reports associated with the user's trips
+    await FeedbackReport.destroy({
       where: { 
-        [Op.or]: [
-          { reported_user_id: user_id }, 
-        ] 
-      }
-    }); 
-    await Travelog.destroy({ where: { user_id: user_id } });
-    await Trip.destroy({ where: { user_id: user_id } });
-    await Message.destroy({ where: { caller_id: user_id } });
-    await Message.destroy({ where: { receiver_id: user_id } });
-    
-    await User.destroy({ where: { user_id: user_id } });
+        reported_trip_id: { 
+          [Op.in]: sequelize.literal(`(SELECT trip_id FROM trips WHERE user_id = ${user_id})`) 
+        }
+      },
+      transaction: transaction
+    });
+
+    // Delete feedback reports associated with the user's travelogs
+    await FeedbackReport.destroy({
+      where: { 
+        reported_travelog_id: { 
+          [Op.in]: sequelize.literal(`(SELECT travelog_id FROM travelogs WHERE user_id = ${user_id})`) 
+        }
+      },
+      transaction: transaction
+    });
+
+    // Delete feedback reports associated with the user's comments
+    await FeedbackReport.destroy({
+      where: { 
+        reported_comment_id: { 
+          [Op.in]: sequelize.literal(`(SELECT comment_id FROM comments WHERE user_id = ${user_id})`) 
+        }
+      },
+      transaction: transaction
+    });
+    // Now you can safely delete travelogs, trips, messages, and the user
+    await Travelog.destroy({ where: { user_id: user_id }, transaction });
+    await Trip.destroy({ where: { user_id: user_id }, transaction });
+    await Message.destroy({ where: { caller_id: user_id }, transaction });
+    await Message.destroy({ where: { receiver_id: user_id }, transaction });
+    await User.destroy({ where: { user_id: user_id }, transaction });
+
+    // Commit the transaction
+    await transaction.commit();
     res.status(200).send({ message: 'User deleted successfully' });
   } catch (error) {
+    // Rollback the transaction in case of error
+    if (transaction) await transaction.rollback();
     console.error('Error deleting user:', error);
     res.status(500).send({ message: 'Server error' });
   }
 });
+
 
 // Changing a password
 router.patch('/api/user/:user_id/password', async (req, res) => {
