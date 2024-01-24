@@ -2082,7 +2082,7 @@ app.get('/api/likers/image', async (req, res) => {
 
 // Permissions routes 
 app.get('/api/permissions/check/:user_id', async (req, res) => {
-  const user_id = req.params.user_id;
+  const { user_id, trip_id } = req.params.user_id;
 
   try {
       // Check for any trip or travelog permissions for the user
