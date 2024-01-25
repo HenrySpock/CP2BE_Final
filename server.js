@@ -2179,21 +2179,22 @@ app.get('/api/permissions/specific/:user_id', async (req, res) => {
   console.log('on /api/permissions/specific/:user_id')
   try {
     const { entityId, entityType } = req.query;
-    console.log('entityId, entityType: ', entityId, entityType)
     const user_id = parseInt(req.params.user_id);
+
+    console.log('entityId, entityType, user_id: ', entityId, entityType, user_id);
 
     let hasAccess = false;
     let permissionCondition = {};
 
     if (entityType === 'travelog') {
       permissionCondition = { grantee_id: user_id, travelog_id: parseInt(entityId) };
-      console.log('permissionCondition: ', permissionCondition)
     } else if (entityType === 'trip') {
       permissionCondition = { grantee_id: user_id, trip_id: parseInt(entityId) };
-      console.log('permissionCondition: ', permissionCondition)
     } else {
       return res.status(400).send('Invalid entity type');
     }
+
+    console.log('permissionCondition: ', permissionCondition);
 
     const permission = await Permission.findOne({ where: permissionCondition });
     hasAccess = !!permission;
@@ -2204,6 +2205,7 @@ app.get('/api/permissions/specific/:user_id', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
+
 
 
 // --------------------------------------------------
