@@ -126,16 +126,38 @@ router.get('/api/tripgetnotprivate/:trip_id', async (req, res) => {
 });
 
 // GET a single trip by trip_id and user_id
+// router.get('/api/tripget/:trip_id', async (req, res) => {
+//   try {
+//     const { trip_id } = req.params;
+//     const user_id = req.query.user_id;
+
+//     const trip = await Trip.findOne({ where: { trip_id: trip_id, user_id: user_id } });
+
+//     if (trip) {
+//       res.status(200).json(trip);
+//     } else {
+//       res.status(404).json({ message: 'Trip not found or you do not have access to this trip' });
+//     }
+//   } catch (error) {
+//     console.error('Error fetching trip:', error);
+//     res.status(500).send('Server error');
+//   }
+// });
+
 router.get('/api/tripget/:trip_id', async (req, res) => {
   try {
     const { trip_id } = req.params;
     const user_id = req.query.user_id;
 
+    console.log(`Fetching trip for author check. Trip ID: ${trip_id}, User ID: ${user_id}`);
+
     const trip = await Trip.findOne({ where: { trip_id: trip_id, user_id: user_id } });
 
     if (trip) {
+      console.log(`Trip found: ${trip}`);
       res.status(200).json(trip);
     } else {
+      console.log(`Trip not found for User ID: ${user_id} and Trip ID: ${trip_id}`);
       res.status(404).json({ message: 'Trip not found or you do not have access to this trip' });
     }
   } catch (error) {
@@ -143,8 +165,6 @@ router.get('/api/tripget/:trip_id', async (req, res) => {
     res.status(500).send('Server error');
   }
 });
-
-
 
 
 // GET a single trip by trip_id
