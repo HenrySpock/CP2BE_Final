@@ -29,6 +29,7 @@ router.get('/api/users/newest', async (req, res) => {
 router.get('/api/trips/newest', async (req, res) => {
   try {
     const newestTrip = await Trip.findOne({
+      where: { is_private: false },
       // attributes: { exclude: ['created_at', 'updated_at'] },
       include: [{ model: User, as: 'User', attributes: ['user_id', 'username', 'created_at']  }],
       order: [['created_at', 'DESC']]
@@ -45,6 +46,7 @@ router.get('/api/trips/newest', async (req, res) => {
 router.get('/api/travelogs/newest', async (req, res) => {
   try {
     const newestTravelog = await Travelog.findOne({
+      where: { is_private: false },
       // attributes: { exclude: ['created_at', 'updated_at'] },
       include: [
         { model: User, as: 'User', attributes: ['user_id', 'username', 'created_at'] }, 
