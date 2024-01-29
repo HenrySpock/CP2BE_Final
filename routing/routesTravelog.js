@@ -150,9 +150,10 @@ router.get('/api/travelog/:id', async (req, res) => {
       ]
     });
     if (travelog) {
-      // console.log('Date Visited:', travelog.date_visited);
+      console.log('Date Visited Before:', travelog.date_visited);
       if (travelog.date_visited) {
         travelog.date_visited = moment(travelog.date_visited).format('YYYY-MM-DDTHH:mm:ss.SSS[Z]');
+        console.log('Date Visited After:', travelog.date_visited);
       }
       res.json(travelog);
     } else {
