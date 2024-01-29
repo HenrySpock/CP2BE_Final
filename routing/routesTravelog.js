@@ -12,6 +12,7 @@ const { User, Image, Travelog, Block, Trip, TipTapContent, FeedbackReport, seque
 const { Op } = require('sequelize');
 const updateLastActive = require('../middleware/updateLastActive');
 const { getFriendsIds, getFollowersIds, getFollowingsIds } = require('../helperFunctions/helperFunctions');
+const moment = require('moment');
 
 // env variables 
 const jwtSecret = process.env.JWT_SECRET; 
@@ -150,6 +151,9 @@ router.get('/api/travelog/:id', async (req, res) => {
     });
     if (travelog) {
       // console.log('Date Visited:', travelog.date_visited);
+      if (travelog.date_visited) {
+        travelog.date_visited = moment(travelog.date_visited).format('YYYY-MM-DDTHH:mm:ss.SSS[Z]');
+      }
       res.json(travelog);
     } else {
       res.status(404).send('Travelog not found');
